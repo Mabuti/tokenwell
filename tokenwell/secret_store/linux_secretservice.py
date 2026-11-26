@@ -59,12 +59,10 @@ def set_token(profile_id: str, token: str) -> None:
 
 def get_token(profile_id: str) -> str:
     _require_secret_tool()
-    result = subprocess.run(["secret-tool", "lookup", "service", SERVICE, "account", profile_id],
-                            capture_output=True, text=True)
+    result = _lookup(SERVICE, profile_id)
     if result.returncode == 0 and result.stdout:
         return result.stdout.strip()
-    old = subprocess.run(["secret-tool", "lookup", "service", LEGACY_SERVICE, "account", profile_id],
-                         capture_output=True, text=True)
+    old = _lookup(LEGACY_SERVICE, profile_id)
     if old.returncode != 0 or not old.stdout:
         raise SecretStoreError(f"No stored credential found for profile {profile_id!r}.")
     token = old.stdout.strip()
@@ -78,8 +76,7 @@ def get_token(profile_id: str) -> str:
         if get_token_new(profile_id) != token:
             raise SecretStoreError("read-back mismatch")
     except Exception as exc:
-        subprocess.run(["secret-tool", "clear", "service", SERVICE, "account", profile_id],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _clear_new_after_failed_migration(profile_id)
         _LOGGER.warning("Tokenwell could not complete legacy secret migration for profile %s: %s",
                         profile_id, exc)
         return token
@@ -90,13 +87,31 @@ def get_token(profile_id: str) -> str:
 
 def get_token_new(profile_id: str) -> str:
     """Read only the new entry; used to verify a legacy rewrite."""
-    result = subprocess.run(["secret-tool", "lookup", "service", SERVICE, "account", profile_id],
-                            capture_output=True, text=True)
+    result = _lookup(SERVICE, profile_id)
     if result.returncode != 0 or not result.stdout:
         raise SecretStoreError("new secret entry missing after migration")
     # secret-tool lookup prints the secret with no trailing newline; strip
     # defensively, matching macos_keychain.get_token.
     return result.stdout.strip()
+
+
+def _lookup(service: str, profile_id: str):
+    return subprocess.run(["secret-tool", "lookup", "service", service, "account", profile_id],
+                          capture_output=True, text=True)
+
+
+def _clear_new_after_failed_migration(profile_id: str) -> None:
+    command = ["secret-tool", "clear", "service", SERVICE, "account", profile_id]
+    for _attempt in range(2):
+        try:
+            result = subprocess.run(command, capture_output=True, text=True)
+            remaining = _lookup(SERVICE, profile_id)
+            if (result.returncode == 0 and
+                    (remaining.returncode != 0 or not remaining.stdout)):
+                return
+        except Exception:
+            pass
+    _LOGGER.error("Tokenwell could not remove failed migrated secret for profile %s", profile_id)
 
 
 def delete_token(profile_id: str) -> None:

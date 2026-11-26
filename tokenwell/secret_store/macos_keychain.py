@@ -50,9 +50,7 @@ def get_token(profile_id: str) -> str:
             if _get_service_token(_service(profile_id)) != token:
                 raise RuntimeError("read-back mismatch")
         except Exception as exc:
-            subprocess.run(["security", "delete-generic-password", "-a", profile_id,
-                            "-s", _service(profile_id)],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _clear_new_after_failed_migration(profile_id)
             _LOGGER.warning("Tokenwell could not complete legacy secret migration for profile %s: %s",
                             profile_id, exc)
             return token
@@ -67,6 +65,22 @@ def _get_service_token(service: str) -> str:
                          "-s", service, "-w"], check=True, stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE, text=True)
     return cp.stdout.strip()
+
+
+def _clear_new_after_failed_migration(profile_id: str) -> None:
+    service = _service(profile_id)
+    command = ["security", "delete-generic-password", "-a", profile_id, "-s", service]
+    for _attempt in range(2):
+        try:
+            result = subprocess.run(command, capture_output=True, text=True)
+            try:
+                _get_service_token(service)
+            except subprocess.CalledProcessError:
+                if result.returncode == 0:
+                    return
+        except Exception:
+            pass
+    _LOGGER.error("Tokenwell could not remove failed migrated secret for profile %s", profile_id)
 
 
 def delete_token(profile_id: str) -> None:

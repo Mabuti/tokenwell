@@ -92,12 +92,18 @@ def test_failed_legacy_secret_write_keeps_old_entry():
 
 
 def test_failed_legacy_secret_verify_keeps_old_entry():
-    responses = [_ok(returncode=1), _ok(stdout="legacy-token\n"), _ok(), _ok(stdout="different\n"), _ok()]
+    responses = [
+        _ok(returncode=1), _ok(stdout="legacy-token\n"), _ok(), _ok(stdout="different\n"),
+        _ok(returncode=1), _ok(returncode=1), _ok(), _ok(returncode=1),
+    ]
     with patch.object(backend.shutil, "which", return_value="/usr/bin/secret-tool"), \
          patch.object(backend.subprocess, "run", side_effect=responses) as mock_run:
         assert backend.get_token("profile-1") == "legacy-token"
     clear_calls = [call.args[0] for call in mock_run.call_args_list if call.args[0][1] == "clear"]
-    assert clear_calls == [["secret-tool", "clear", "service", "tokenwell.oauth", "account", "profile-1"]]
+    assert clear_calls == [
+        ["secret-tool", "clear", "service", "tokenwell.oauth", "account", "profile-1"],
+        ["secret-tool", "clear", "service", "tokenwell.oauth", "account", "profile-1"],
+    ]
 
 
 def test_failed_verify_clears_new_entry_so_second_read_uses_legacy():
