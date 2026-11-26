@@ -262,13 +262,20 @@ Requires **Python 3.10+**, **git**, and the **`claude`** CLI on your `PATH`.
 
 ### Upgrading from Claude Unlimited
 
-The first Tokenwell start migrates `~/.claude-unlimited` to `~/.tokenwell` on POSIX, renames the
-database and its WAL files, and leaves a compatibility symlink at the old path. Secret-store
-credentials migrate on read: Tokenwell writes and verifies the new entry before removing the old
-one. The old service is removed. `cu` and `claude-unlimited` continue to work. Installs made with
-`install.sh` need one reinstall from the new URL; editable installs need one `pip install -e .`.
+`install.sh` makes a timestamped copy of a real `~/.claude-unlimited` directory before it runs
+the new installer. On POSIX, `tokenwell install` (which `install.sh` runs) migrates the data to
+`~/.tokenwell`, renames the database and its WAL files, and leaves a compatibility symlink at the
+old path. The service rename happens during `tokenwell install`, not on the first daemon start.
 
-Migration is forward-only. Back up `~/.claude-unlimited` first if you may want to roll back.
+On Windows, Tokenwell keeps reading `~/.claude-unlimited` in place while `~/.tokenwell` does not
+exist. When both directories exist, the new one wins; Tokenwell does not merge them. `cu` and
+`claude-unlimited` continue to work. Installs made with `install.sh` need one reinstall from the
+new URL; editable installs need one `pip install -e .`.
+
+Secret-store credentials migrate on read: Tokenwell copies and verifies the new keystore entry,
+then deletes the old-name entry only after verification succeeds. The directory backup therefore
+does not include keystore credentials. Migration is forward-only; keep the installer backup if
+you may want to roll back.
 
 ### Installing under WSL
 
@@ -1172,8 +1179,7 @@ notification** there to confirm they reach you.
 
 ## Updates
 
-> **On this fork:** the updater points at this repository (Mabuti/tokenwell),
-> never upstream. Releases are cut here — see
+> The updater points at this repository (Mabuti/tokenwell). Releases are cut here — see
 > [`docs/RELEASING.md`](docs/RELEASING.md). The default mode, *Auto-download only*,
 > stages a verified copy but never installs without a click — **Fully manual** is a
 > preference, not a safety fix. If you installed from a checkout (`./install.sh` after
@@ -1493,9 +1499,9 @@ version that does — the update check is one of the calls that fails. Either:
 | What | Where |
 |---|---|
 | Credentials | macOS Keychain / Linux Secret Service / Windows DPAPI — never plaintext on disk |
-| Account configuration | `~/.tokenwell/config.json` |
-| Usage history, activity log, project attribution | `~/.tokenwell/tokenwell.db` — one local SQLite file, kept in full (older `*.jsonl` logs are imported once on first start and renamed `*.imported`) |
-| Logs | `~/.tokenwell/logs/` |
+| Account configuration | `~/.tokenwell/config.json` (or `~/.claude-unlimited/config.json` on Windows until migrated) |
+| Usage history, activity log, project attribution | `~/.tokenwell/tokenwell.db` — one local SQLite file, kept in full (older `*.jsonl` logs are imported once on first start and renamed `*.imported`); Windows reads `~/.claude-unlimited` until `~/.tokenwell` exists |
+| Logs | `~/.tokenwell/logs/` (or the legacy data folder on Windows until migrated) |
 | Your Claude Code setup | `~/.claude` — untouched |
 
 ## Security
@@ -1509,9 +1515,8 @@ Full threat model and vulnerability reporting: [`SECURITY.md`](SECURITY.md).
 
 ## Requirements
 
-- **macOS, Linux, or Windows** — macOS is verified on real hardware upstream; this fork
-  runs day-to-day under **WSL (Ubuntu)**. Other Linux desktops and Windows are a real but
-  less-exercised path
+- **macOS, Linux, or Windows** — macOS is verified on real hardware; development runs day-to-day
+  under **WSL (Ubuntu)**. Other Linux desktops and Windows are a real but less-exercised path
   ([details](docs/adr/0005-windows-linux-backends-unverified-first-cut.md)).
 - **Python 3.10+** (with `venv`), **git**, and the **`claude`** CLI — plus **`codex`** if
   you'll pool Codex accounts.

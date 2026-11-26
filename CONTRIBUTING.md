@@ -163,27 +163,6 @@ A PR description says:
 The title follows the same convention as a commit subject, because a squashed
 merge becomes one. `.github/PULL_REQUEST_TEMPLATE.md` carries the checklist.
 
-### On this fork
-
-`main` is not protected here and a small change lands on it directly. Anything
-non-trivial goes through a pull request: an upstream merge, a change touching the
-gateway or a credential path, or anything large enough that a reviewable diff is worth
-more than the minute it costs to open one.
-
-This is a single-maintainer fork, so a PR here is not about routing to a second
-reviewer — there isn't one. It is about getting CI to run before `main` moves, and
-leaving a diff that can be read later by someone who has forgotten the context,
-including the author.
-
-An earlier version of this section claimed no PR had ever been opened here. That
-stopped being true the moment the PR carrying the claim was merged; it is corrected
-rather than quietly deleted, because a contributing guide that is confidently wrong
-about its own process is worse than one that says nothing.
-
-The rule above still governs upstream. Where a change does land straight on `main`,
-the three things a PR description would say — what changed, why, how it was verified —
-belong in the commit body instead.
-
 ## Never let untrusted text reach a shell
 
 This bit us once and is worth stating outright.
