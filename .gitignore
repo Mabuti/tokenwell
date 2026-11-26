@@ -23,6 +23,7 @@ htmlcov/
 # Local runtime state (real credentials, usage history, logs — never commit)
 *.log
 .claude-unlimited/
+.tokenwell/
 
 # Tool-specific working directories not part of the shipped project
 .impeccable/
