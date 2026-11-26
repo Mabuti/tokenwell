@@ -55,6 +55,14 @@ def test_installers_defer_migration_until_the_new_daemon_starts():
     assert "$env:TOKENWELL_NO_MIGRATE = '1'" in powershell
 
 
+def test_shell_installers_expand_empty_arguments_safely_under_set_u():
+    install = (ROOT / "install.sh").read_text(encoding="utf-8")
+    uninstall = (ROOT / "uninstall.sh").read_text(encoding="utf-8")
+    assert 'main ${1+"$@"}' in install
+    assert 'purge ${1+"$@"}' in uninstall
+    assert '[ -z "${BASH_SOURCE[0]:-}" ] || [ "${BASH_SOURCE[0]}" = "$0" ]' in install
+
+
 def test_windows_installer_restores_no_migrate_environment_value():
     powershell = (ROOT / "install.ps1").read_text(encoding="utf-8")
     assert "GetEnvironmentVariable('TOKENWELL_NO_MIGRATE', 'Process')" in powershell
@@ -83,7 +91,7 @@ def test_the_uninstaller_falls_back_only_when_the_launcher_cannot_run():
     # Not exec'd: a launcher whose interpreter is gone must reach the manual
     # removal, while purge's own exit status (a declined prompt is 1) is final.
     assert 'exec "$LAUNCHER"' not in script
-    assert '"$LAUNCHER" purge "$@" || purge_status=$?' in script
+    assert '"$LAUNCHER" purge ${1+"$@"} || purge_status=$?' in script
     assert "126|127)" in script
     assert '*) exit "$purge_status" ;;' in script
     assert script.index("126|127)") < script.index("removing files directly")

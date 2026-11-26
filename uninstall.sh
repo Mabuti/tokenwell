@@ -41,7 +41,7 @@ if [ -n "$LAUNCHER" ]; then
   # must fall through to the manual removal below. Any other exit status is
   # purge's own answer — including declining its confirmation — and is final.
   purge_status=0
-  "$LAUNCHER" purge "$@" || purge_status=$?
+  "$LAUNCHER" purge ${1+"$@"} || purge_status=$?
   case "$purge_status" in
     126|127) echo "$LAUNCHER could not be run (exit $purge_status)." ;;
     *) exit "$purge_status" ;;

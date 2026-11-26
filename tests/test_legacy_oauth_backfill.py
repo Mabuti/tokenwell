@@ -410,3 +410,40 @@ def test_startup_fires_exactly_one_backfill_pass(env, monkeypatch, tmp_path):
     assert backfill_calls == [1]
     assert rewrite_calls == [1]
     assert "_oauth_refresh_loop" in thread_targets
+
+
+def test_startup_continues_when_service_path_rewrite_fails(env, monkeypatch, tmp_path):
+    startup_steps = []
+
+    class _FakeServer:
+        server_address = ("127.0.0.1", 4317)
+
+        def serve_forever(self):
+            raise KeyboardInterrupt
+
+        def server_close(self):
+            startup_steps.append("closed")
+
+    class _FakeThread:
+        def __init__(self, target=None, daemon=False, **kwargs):
+            pass
+
+        def start(self):
+            pass
+
+    def _rewrite_that_fails():
+        raise RuntimeError("rewrite failed")
+
+    monkeypatch.setattr(daemon, "make_server", lambda host, port: _FakeServer())
+    monkeypatch.setattr(daemon.model_catalogue, "initialize", lambda: startup_steps.append("models"))
+    monkeypatch.setattr(daemon.updater, "ensure_cli_aliases", lambda: None)
+    monkeypatch.setattr(daemon.config, "MIGRATED_LEGACY_APP_DIR", True)
+    monkeypatch.setattr(
+        daemon.daemon_installer, "rewrite_service_paths_after_migration", _rewrite_that_fails)
+    monkeypatch.setattr(daemon, "threading", types.SimpleNamespace(Thread=_FakeThread))
+    monkeypatch.setattr(daemon, "PID_FILE", tmp_path / "daemon.pid")
+    monkeypatch.setattr(daemon, "_backfill_legacy_oauth_organizations_async", lambda: None)
+
+    daemon.run_foreground(host="127.0.0.1", port=4317)
+
+    assert startup_steps == ["models", "closed"]

@@ -1,5 +1,6 @@
 import os
 import subprocess
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -78,6 +79,26 @@ def test_rewrite_service_paths_after_migration_updates_plist_only(isolated_paths
     assert plist["StandardOutPath"] == str(new_root / "logs" / "daemon.out.log")
     assert plist["StandardErrorPath"] == str(new_root / "logs" / "daemon.err.log")
     assert calls == []
+
+
+def test_rewrite_service_paths_does_not_create_missing_plist(isolated_paths, monkeypatch):
+    calls = []
+    monkeypatch.setattr(launchd, "_run_launchctl", lambda *args: calls.append(args))
+
+    assert not launchd.PLIST_PATH.exists()
+    launchd.rewrite_service_paths_after_migration()
+
+    assert not launchd.PLIST_PATH.exists()
+    assert calls == []
+
+
+def test_rewrite_service_paths_swallows_backend_exception(monkeypatch):
+    plist_path = MagicMock()
+    plist_path.is_file.return_value = True
+    plist_path.read_bytes.side_effect = RuntimeError("plist read failed")
+    monkeypatch.setattr(launchd, "PLIST_PATH", plist_path)
+
+    launchd.rewrite_service_paths_after_migration()
 
 
 def test_install_raises_on_bootstrap_failure(isolated_paths, monkeypatch):

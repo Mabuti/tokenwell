@@ -299,6 +299,6 @@ if [ -n "$PATH_NOTE" ]; then
 fi
 }
 
-if [ "${BASH_SOURCE[0]}" = "$0" ]; then
-  main "$@"
+if [ -z "${BASH_SOURCE[0]:-}" ] || [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main ${1+"$@"}
 fi

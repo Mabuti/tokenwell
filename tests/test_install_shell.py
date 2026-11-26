@@ -1,4 +1,6 @@
 import os
+import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -6,6 +8,66 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _installer_stub_path(tmp_path):
+    stub_dir = tmp_path / "stub-bin"
+    stub_dir.mkdir()
+    stubs = {
+        "uname": "printf '%s\\n' Linux\n",
+        "mktemp": "printf '%s\\n' \"$HOME/installer-temp\"\n",
+        "rm": "exit 0\n",
+        "env": "if [ \"$1\" = bash ]; then shift; exec /bin/bash \"$@\"; fi\nexit 1\n",
+        "bash": "exec /bin/bash \"$@\"\n",
+    }
+    for name, body in stubs.items():
+        stub = stub_dir / name
+        stub.write_text(f"#!/bin/bash\n{body}", encoding="utf-8")
+        stub.chmod(0o755)
+    return stub_dir
+
+
+def _run_real_installer(tmp_path, mode):
+    home = tmp_path / "home"
+    home.mkdir()
+    stub_dir = _installer_stub_path(tmp_path)
+    env = {"HOME": str(home), "PATH": str(stub_dir)}
+    bash = shutil.which("bash")
+    assert bash is not None
+
+    if mode == "bash-stdin":
+        command = [bash]
+        input_data = (ROOT / "install.sh").read_bytes()
+    elif mode == "cat-pipe":
+        command = [
+            "/bin/sh", "-c",
+            f"/bin/cat {shlex.quote(str(ROOT / 'install.sh'))} | {shlex.quote(bash)}",
+        ]
+        input_data = None
+    elif mode == "bash-file":
+        command = [bash, "install.sh"]
+        input_data = None
+    else:
+        command = [str(ROOT / "install.sh")]
+        input_data = None
+
+    return subprocess.run(
+        command,
+        cwd=ROOT,
+        env=env,
+        input=input_data,
+        capture_output=True,
+        text=False,
+    )
+
+
+@pytest.mark.parametrize("mode", ["bash-stdin", "cat-pipe", "bash-file", "direct-file"])
+def test_installer_executes_main_when_run_as_a_script_or_from_stdin(tmp_path, mode):
+    result = _run_real_installer(tmp_path, mode)
+
+    assert result.returncode == 1
+    assert b"Tokenwell installer" in result.stdout
+    assert b"Missing required command(s):" in result.stderr
 
 
 @pytest.fixture

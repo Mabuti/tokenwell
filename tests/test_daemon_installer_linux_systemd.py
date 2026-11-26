@@ -67,6 +67,25 @@ def test_rewrite_service_paths_after_migration_reloads_without_restarting(tmp_pa
     assert calls == [("daemon-reload",)]
 
 
+def test_rewrite_service_paths_does_not_create_missing_unit():
+    assert not backend.UNIT_PATH.exists()
+
+    with patch.object(backend, "_run_systemctl") as mock_run:
+        backend.rewrite_service_paths_after_migration()
+
+    assert not backend.UNIT_PATH.exists()
+    mock_run.assert_not_called()
+
+
+def test_rewrite_service_paths_swallows_backend_exception(monkeypatch):
+    unit_path = MagicMock()
+    unit_path.is_file.return_value = True
+    unit_path.read_text.side_effect = RuntimeError("unit read failed")
+    monkeypatch.setattr(backend, "UNIT_PATH", unit_path)
+
+    backend.rewrite_service_paths_after_migration()
+
+
 def test_rewrite_service_paths_logs_reload_failure_and_does_not_raise(tmp_path, monkeypatch, caplog):
     home = tmp_path / "home"
     monkeypatch.setattr(backend.Path, "home", classmethod(lambda cls: home))
