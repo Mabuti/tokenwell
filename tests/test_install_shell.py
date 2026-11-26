@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parent.parent
 def _installer_stub_path(tmp_path):
     stub_dir = tmp_path / "stub-bin"
     stub_dir.mkdir()
+    for name in ("dirname", "grep"):
+        (stub_dir / name).symlink_to(shutil.which(name), target_is_directory=False)
     stubs = {
         "uname": "printf '%s\\n' Linux\n",
         "mktemp": "printf '%s\\n' \"$HOME/installer-temp\"\n",
@@ -30,6 +32,11 @@ def _installer_stub_path(tmp_path):
 def _run_real_installer(tmp_path, mode):
     home = tmp_path / "home"
     home.mkdir()
+    run_dir = tmp_path / "unrelated-cwd"
+    run_dir.mkdir()
+    (run_dir / "pyproject.toml").write_text(
+        '[project]\nname = "not-tokenwell"\n', encoding="utf-8"
+    )
     stub_dir = _installer_stub_path(tmp_path)
     env = {"HOME": str(home), "PATH": str(stub_dir)}
     bash = shutil.which("bash")
@@ -45,7 +52,7 @@ def _run_real_installer(tmp_path, mode):
         ]
         input_data = None
     elif mode == "bash-file":
-        command = [bash, "install.sh"]
+        command = [bash, str(ROOT / "install.sh")]
         input_data = None
     else:
         command = [str(ROOT / "install.sh")]
@@ -53,7 +60,7 @@ def _run_real_installer(tmp_path, mode):
 
     return subprocess.run(
         command,
-        cwd=ROOT,
+        cwd=run_dir,
         env=env,
         input=input_data,
         capture_output=True,
@@ -61,13 +68,23 @@ def _run_real_installer(tmp_path, mode):
     )
 
 
-@pytest.mark.parametrize("mode", ["bash-stdin", "cat-pipe", "bash-file", "direct-file"])
-def test_installer_executes_main_when_run_as_a_script_or_from_stdin(tmp_path, mode):
+@pytest.mark.parametrize("mode", ["bash-stdin", "cat-pipe"])
+def test_piped_installer_clones_instead_of_using_unrelated_cwd(tmp_path, mode):
+    result = _run_real_installer(tmp_path, mode)
+
+    assert result.returncode == 1
+    assert b"Tokenwell installer" in result.stdout
+    assert b" git" in result.stderr
+
+
+@pytest.mark.parametrize("mode", ["bash-file", "direct-file"])
+def test_file_installer_uses_its_own_checkout_from_unrelated_cwd(tmp_path, mode):
     result = _run_real_installer(tmp_path, mode)
 
     assert result.returncode == 1
     assert b"Tokenwell installer" in result.stdout
     assert b"Missing required command(s):" in result.stderr
+    assert b" git" not in result.stderr
 
 
 @pytest.fixture

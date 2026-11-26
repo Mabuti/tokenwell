@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_URL="${TOKENWELL_REPO:-${CLAUDE_UNLIMITED_REPO:-https://github.com/Mabuti/tokenwell.git}}"
 REPO_BRANCH="${TOKENWELL_BRANCH:-${CLAUDE_UNLIMITED_BRANCH:-main}}"
+INSTALL_SCRIPT_PATH="${BASH_SOURCE[0]:-}"
 INSTALL_ROOT="$HOME/.local/share/tokenwell"
 LEGACY_INSTALL_ROOT="$HOME/.local/share/claude-unlimited"
 BIN_DIR="$HOME/.local/bin"
@@ -106,8 +107,15 @@ on_exit() {
 }
 
 main() {
-if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/pyproject.toml" ]; then
-  SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+local script_dir=""
+if [ -n "$INSTALL_SCRIPT_PATH" ]; then
+  script_dir="$(dirname "$INSTALL_SCRIPT_PATH")"
+fi
+if [ -n "$script_dir" ] && [ -f "$script_dir/pyproject.toml" ] && {
+  [ -f "$script_dir/tokenwell/__init__.py" ] ||
+  grep -Eq "^[[:space:]]*name[[:space:]]*=[[:space:]]*[\"']tokenwell[\"']([[:space:]]*#.*)?$" "$script_dir/pyproject.toml"
+}; then
+  SOURCE_DIR="$(cd "$script_dir" && pwd)"
 else
   SOURCE_DIR="$(mktemp -d)"
   CLONED="$SOURCE_DIR"

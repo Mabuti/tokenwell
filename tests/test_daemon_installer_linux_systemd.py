@@ -67,7 +67,8 @@ def test_rewrite_service_paths_after_migration_reloads_without_restarting(tmp_pa
     assert calls == [("daemon-reload",)]
 
 
-def test_rewrite_service_paths_does_not_create_missing_unit():
+def test_rewrite_service_paths_does_not_create_missing_unit(tmp_path, monkeypatch):
+    monkeypatch.setattr(backend, "UNIT_PATH", tmp_path / "systemd-user" / backend.UNIT_NAME)
     assert not backend.UNIT_PATH.exists()
 
     with patch.object(backend, "_run_systemctl") as mock_run:
