@@ -129,6 +129,39 @@ def test_upgrade_starts_new_task_before_deleting_old_task(tmp_path):
     assert start_new < delete_old
 
 
+def test_upgrade_removes_legacy_launcher_only_after_successful_task_delete():
+    legacy_launcher = backend.LOG_DIR.parent / "daemon_launcher.cmd"
+    legacy_launcher.write_text("legacy launcher", encoding="ascii")
+
+    def run(*args):
+        if args[:4] == ("schtasks", "/query", "/tn", backend.LEGACY_TASK_NAME):
+            return _ok(stdout="Running")
+        return _ok()
+
+    with patch.object(backend, "_run", side_effect=run):
+        backend.install(4317)
+
+    assert not legacy_launcher.exists()
+
+
+def test_failed_upgrade_leaves_legacy_launcher_runnable():
+    legacy_launcher = backend.LOG_DIR.parent / "daemon_launcher.cmd"
+    legacy_launcher.write_text("legacy launcher", encoding="ascii")
+
+    def run(*args):
+        if args[:4] == ("schtasks", "/query", "/tn", backend.LEGACY_TASK_NAME):
+            return _ok(stdout="Running")
+        if args == ("schtasks", "/run", "/tn", backend.TASK_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        return _ok()
+
+    with patch.object(backend, "_run", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError):
+            backend.install(4317)
+
+    assert legacy_launcher.read_text(encoding="ascii") == "legacy launcher"
+
+
 def test_upgrade_failure_removes_new_task_and_restarts_old_task():
     calls = []
 
