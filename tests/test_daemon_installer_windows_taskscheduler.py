@@ -36,12 +36,7 @@ def test_install_creates_task_and_starts_it():
         calls.append(args)
         return _ok()
 
-    # start() now hands the actual (re)start to a detached helper — the daemon
-    # can't taskkill-then-run itself — so we assert install created the task and
-    # delegated the start, rather than expecting an inline schtasks /run.
-    with patch.object(backend, "_run", side_effect=fake_run), \
-         patch.object(backend, "is_installed", return_value=True), \
-         patch.object(backend, "_detached_restart") as mock_restart:
+    with patch.object(backend, "_run", side_effect=fake_run):
         backend.install(4317)
 
     assert ("schtasks", "/delete", "/tn", backend.LEGACY_TASK_NAME, "/f") in calls
@@ -60,7 +55,7 @@ def test_install_creates_task_and_starts_it():
     assert "tokenwell start --port 4317" in content
     assert " -u " in content  # unbuffered — see the buffering half of the same bug
     assert ">>" in content and "daemon.out.log" in content and "daemon.err.log" in content
-    mock_restart.assert_called_once()
+    assert ("schtasks", "/run", "/tn", backend.TASK_NAME) in calls
 
 
 def test_start_delegates_to_a_detached_restart():
@@ -87,6 +82,43 @@ def test_install_raises_on_create_failure():
     with patch.object(backend, "_run", return_value=_ok(returncode=1, stdout="access denied")):
         with pytest.raises(backend.DaemonInstallerError):
             backend.install(4317)
+
+
+def test_upgrade_starts_new_task_before_deleting_old_task(tmp_path):
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        if args[:4] == ("schtasks", "/query", "/tn", backend.LEGACY_TASK_NAME):
+            return _ok(stdout="Running")
+        return _ok()
+
+    with patch.object(backend, "_run", side_effect=run):
+        backend.install(4317)
+
+    assert ("schtasks", "/end", "/tn", backend.LEGACY_TASK_NAME) in calls
+    start_new = calls.index(("schtasks", "/run", "/tn", backend.TASK_NAME))
+    delete_old = calls.index(("schtasks", "/delete", "/tn", backend.LEGACY_TASK_NAME, "/f"))
+    assert start_new < delete_old
+
+
+def test_upgrade_failure_removes_new_task_and_restarts_old_task():
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        if args[:4] == ("schtasks", "/query", "/tn", backend.LEGACY_TASK_NAME):
+            return _ok(stdout="Running")
+        if args == ("schtasks", "/run", "/tn", backend.TASK_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        return _ok()
+
+    with patch.object(backend, "_run", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError):
+            backend.install(4317)
+
+    assert ("schtasks", "/delete", "/tn", backend.TASK_NAME, "/f") in calls
+    assert ("schtasks", "/run", "/tn", backend.LEGACY_TASK_NAME) in calls
 
 
 def test_status_not_installed():

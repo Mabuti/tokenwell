@@ -139,21 +139,30 @@ def install(port: int) -> None:
     probe = _run_systemctl("is-system-running")  # raises DaemonInstallerError if no systemctl
     del probe  # return code is irrelevant; we only needed it not to raise
 
-    _run_systemctl("disable", "--now", LEGACY_UNIT_NAME)
+    old_present = LEGACY_UNIT_PATH.exists()
+    old_enabled = False
+    old_running = False
+    if old_present:
+        old_enabled = _run_systemctl("is-enabled", LEGACY_UNIT_NAME).returncode == 0
+        old_running = _run_systemctl("is-active", LEGACY_UNIT_NAME).returncode == 0
+        if old_running:
+            stopped = _run_systemctl("stop", LEGACY_UNIT_NAME)
+            if stopped.returncode != 0:
+                raise DaemonInstallerError(
+                    f"systemctl --user stop failed: {(stopped.stderr or stopped.stdout).strip()}")
     old_dropin = UNIT_DIR / f"{LEGACY_UNIT_NAME}.d"
     new_dropin = UNIT_DIR / f"{UNIT_NAME}.d"
-    if old_dropin.is_dir():
-        new_dropin.mkdir(parents=True, exist_ok=True)
-        for item in old_dropin.iterdir():
-            target = new_dropin / item.name
-            if not target.exists() and item.is_file():
-                shutil.copy2(item, target)
     UNIT_DIR.mkdir(parents=True, exist_ok=True)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    UNIT_PATH.write_text(_unit_contents(port), encoding="utf-8")
-    LEGACY_UNIT_PATH.unlink(missing_ok=True)
 
     try:
+        if old_dropin.is_dir():
+            new_dropin.mkdir(parents=True, exist_ok=True)
+            for item in old_dropin.iterdir():
+                target = new_dropin / item.name
+                if not target.exists() and item.is_file():
+                    shutil.copy2(item, target)
+        UNIT_PATH.write_text(_unit_contents(port), encoding="utf-8")
         reload_result = _run_systemctl("daemon-reload")
         if reload_result.returncode != 0:
             raise DaemonInstallerError(
@@ -171,13 +180,20 @@ def install(port: int) -> None:
         if restart_result.returncode != 0:
             raise DaemonInstallerError(
                 f"systemctl --user restart failed: {(restart_result.stderr or restart_result.stdout).strip()}")
-    except DaemonInstallerError:
-        # Leave the machine as we found it: a half-registered unit that then
-        # makes status()/doctor() misreport is worse than no unit.
+    except (OSError, DaemonInstallerError):
+        # Remove the new registration, then restore the old service only to
+        # the enabled/running state it had before the upgrade.
         UNIT_PATH.unlink(missing_ok=True)
         _run_systemctl("daemon-reload")
+        if old_present:
+            if old_enabled:
+                _run_systemctl("enable", LEGACY_UNIT_NAME)
+            if old_running:
+                _run_systemctl("start", LEGACY_UNIT_NAME)
         raise
 
+    _run_systemctl("disable", LEGACY_UNIT_NAME)
+    LEGACY_UNIT_PATH.unlink(missing_ok=True)
     _enable_linger()
 
 

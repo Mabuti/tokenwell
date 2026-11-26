@@ -19,6 +19,7 @@ def _ok(stdout="", returncode=0):
 def isolated_unit_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(backend, "UNIT_DIR", tmp_path / "systemd-user")
     monkeypatch.setattr(backend, "UNIT_PATH", tmp_path / "systemd-user" / backend.UNIT_NAME)
+    monkeypatch.setattr(backend, "LEGACY_UNIT_PATH", tmp_path / "systemd-user" / backend.LEGACY_UNIT_NAME)
     monkeypatch.setattr(backend, "LOG_DIR", tmp_path / "logs")
     # Never touch a real loginctl or systemd version during these tests.
     monkeypatch.setattr(backend, "_enable_linger", lambda: None)
@@ -59,6 +60,55 @@ def test_install_raises_on_systemctl_failure_and_cleans_up_the_unit():
     # A failed install must not leave an orphan unit that then makes every
     # later status()/doctor() misreport "installed".
     assert not backend.UNIT_PATH.exists()
+
+
+def test_upgrade_stops_old_service_before_starting_new_and_preserves_dropin(tmp_path):
+    old_path = backend.UNIT_DIR / backend.LEGACY_UNIT_NAME
+    old_dropin = backend.UNIT_DIR / f"{backend.LEGACY_UNIT_NAME}.d"
+    new_dropin = backend.UNIT_DIR / f"{backend.UNIT_NAME}.d"
+    backend.UNIT_DIR.mkdir(parents=True)
+    old_path.write_text("old", encoding="utf-8")
+    old_dropin.mkdir()
+    (old_dropin / "limits.conf").write_text("old-dropin", encoding="utf-8")
+    new_dropin.mkdir()
+    (new_dropin / "limits.conf").write_text("new-dropin", encoding="utf-8")
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        return _ok()
+
+    with patch.object(backend, "_run_systemctl", side_effect=run):
+        backend.install(4317)
+
+    assert not old_path.exists()
+    assert backend.UNIT_PATH.exists()
+    assert (old_dropin / "limits.conf").read_text() == "old-dropin"
+    assert (new_dropin / "limits.conf").read_text() == "new-dropin"
+    assert calls.index(("stop", backend.LEGACY_UNIT_NAME)) < calls.index(("restart", backend.UNIT_NAME))
+    assert calls.index(("disable", backend.LEGACY_UNIT_NAME)) > calls.index(("restart", backend.UNIT_NAME))
+
+
+def test_upgrade_failure_restores_old_service_and_removes_new_unit(tmp_path):
+    old_path = backend.UNIT_DIR / backend.LEGACY_UNIT_NAME
+    backend.UNIT_DIR.mkdir(parents=True)
+    old_path.write_text("old", encoding="utf-8")
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        if args == ("restart", backend.UNIT_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        return _ok()
+
+    with patch.object(backend, "_run_systemctl", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError):
+            backend.install(4317)
+
+    assert old_path.exists()
+    assert not backend.UNIT_PATH.exists()
+    assert ("enable", backend.LEGACY_UNIT_NAME) in calls
+    assert ("start", backend.LEGACY_UNIT_NAME) in calls
 
 
 def test_install_on_a_systemd_less_box_raises_cleanly_and_leaves_no_unit():

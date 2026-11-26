@@ -23,6 +23,19 @@ for candidate in \
     break
   fi
 done
+if [ -z "$LAUNCHER" ]; then
+  for candidate in \
+    "$HOME/.local/bin/claude-unlimited" \
+    "$LEGACY_INSTALL_ROOT/venv/bin/claude-unlimited" \
+    "$HOME/.local/bin/cu" \
+    "$(command -v claude-unlimited 2>/dev/null || true)" \
+    "$(command -v cu 2>/dev/null || true)"; do
+    if [ -n "$candidate" ] && [ -f "$candidate" ] && [ -x "$candidate" ]; then
+      LAUNCHER="$candidate"
+      break
+    fi
+  done
+fi
 if [ -n "$LAUNCHER" ]; then
   # Not `exec`: a launcher that cannot start at all (its interpreter is gone)
   # must fall through to the manual removal below. Any other exit status is
@@ -38,7 +51,8 @@ fi
 echo "The tokenwell command isn't available — removing files directly."
 echo "NOTE: stored credentials cannot be removed this way, because the config"
 echo "that names them is about to go. Remove entries with the service prefix"
-echo "'tokenwell.oauth.' from your OS keystore by hand if you want them gone."
+echo "'tokenwell.oauth.' or 'claude-unlimited.oauth.' from your OS keystore by"
+echo "hand if you want them gone."
 echo
 
 # Tear down the background service first, so its files aren't orphaned. Without

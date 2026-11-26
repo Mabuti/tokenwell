@@ -24,6 +24,18 @@ trap cleanup EXIT
 echo "Tokenwell installer"
 echo "=========================="
 
+# Keep a recoverable copy before installing or invoking the new command. A
+# symlink is the migration compatibility path, not user data to duplicate.
+LEGACY_DATA_ROOT="$HOME/.claude-unlimited"
+if [ -d "$LEGACY_DATA_ROOT" ] && [ ! -L "$LEGACY_DATA_ROOT" ]; then
+  LEGACY_BACKUP="$HOME/.claude-unlimited.bak-$(date +%Y%m%d-%H%M%S)"
+  cp -a "$LEGACY_DATA_ROOT" "$LEGACY_BACKUP"
+  echo "Backed up legacy data to: $LEGACY_BACKUP"
+fi
+if [ -d "$LEGACY_INSTALL_ROOT" ]; then
+  echo "Old install found at $LEGACY_INSTALL_ROOT; it is no longer used and can be removed after you check the upgrade."
+fi
+
 missing=""
 command -v python3 >/dev/null 2>&1 || missing="$missing python3"
 command -v claude  >/dev/null 2>&1 || missing="$missing claude"

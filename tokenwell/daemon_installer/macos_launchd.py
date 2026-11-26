@@ -42,8 +42,15 @@ def install(port: int) -> None:
 
     LAUNCH_AGENTS_DIR.mkdir(parents=True, exist_ok=True)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    _run_launchctl("bootout", f"{_domain_target()}/{LEGACY_LABEL}")
-    LEGACY_PLIST_PATH.unlink(missing_ok=True)
+    old_present = LEGACY_PLIST_PATH.exists()
+    old_running = False
+    if old_present:
+        old_running = _run_launchctl("print", f"{_domain_target()}/{LEGACY_LABEL}").returncode == 0
+        if old_running:
+            stopped = _run_launchctl("bootout", f"{_domain_target()}/{LEGACY_LABEL}")
+            if stopped.returncode != 0:
+                raise DaemonInstallerError(
+                    f"launchctl bootout failed: {(stopped.stderr or stopped.stdout).strip()}")
 
     plist = {
         "Label": LABEL,
@@ -57,13 +64,26 @@ def install(port: int) -> None:
         "StandardOutPath": str(LOG_DIR / "daemon.out.log"),
         "StandardErrorPath": str(LOG_DIR / "daemon.err.log"),
     }
-    with open(PLIST_PATH, "wb") as f:
-        plistlib.dump(plist, f)
+    try:
+        with open(PLIST_PATH, "wb") as f:
+            plistlib.dump(plist, f)
 
-    _run_launchctl("bootout", f"{_domain_target()}/{LABEL}")  # ignore failure: fine if it wasn't loaded
-    result = _run_launchctl("bootstrap", _domain_target(), str(PLIST_PATH))
-    if result.returncode != 0:
-        raise DaemonInstallerError(f"launchctl bootstrap failed: {(result.stderr or result.stdout).strip()}")
+        _run_launchctl("bootout", f"{_domain_target()}/{LABEL}")  # ignore failure: fine if it wasn't loaded
+        result = _run_launchctl("bootstrap", _domain_target(), str(PLIST_PATH))
+        if result.returncode != 0:
+            raise DaemonInstallerError(f"launchctl bootstrap failed: {(result.stderr or result.stdout).strip()}")
+    except (OSError, DaemonInstallerError):
+        _run_launchctl("bootout", f"{_domain_target()}/{LABEL}")
+        PLIST_PATH.unlink(missing_ok=True)
+        if old_running:
+            restored = _run_launchctl("bootstrap", _domain_target(), str(LEGACY_PLIST_PATH))
+            if restored.returncode != 0:
+                raise DaemonInstallerError(
+                    f"launchctl bootstrap rollback failed: {(restored.stderr or restored.stdout).strip()}")
+        raise
+
+    _run_launchctl("bootout", f"{_domain_target()}/{LEGACY_LABEL}")
+    LEGACY_PLIST_PATH.unlink(missing_ok=True)
 
 
 def uninstall() -> None:

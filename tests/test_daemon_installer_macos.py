@@ -16,6 +16,7 @@ pytestmark = pytest.mark.skipif(os.name == "nt", reason="macOS launchd backend")
 def isolated_paths(monkeypatch, tmp_path):
     monkeypatch.setattr(launchd, "LAUNCH_AGENTS_DIR", tmp_path / "LaunchAgents")
     monkeypatch.setattr(launchd, "PLIST_PATH", tmp_path / "LaunchAgents" / f"{launchd.LABEL}.plist")
+    monkeypatch.setattr(launchd, "LEGACY_PLIST_PATH", tmp_path / "LaunchAgents" / f"{launchd.LEGACY_LABEL}.plist")
     monkeypatch.setattr(launchd, "LOG_DIR", tmp_path / "logs")
     return tmp_path
 
@@ -63,6 +64,48 @@ def test_install_raises_on_bootstrap_failure(isolated_paths, monkeypatch):
 
     with pytest.raises(launchd.DaemonInstallerError, match="boom"):
         launchd.install(port=4317)
+
+
+def test_upgrade_removes_old_plist_only_after_new_bootstrap(isolated_paths, monkeypatch):
+    old = isolated_paths / "LaunchAgents" / f"{launchd.LEGACY_LABEL}.plist"
+    old.parent.mkdir(parents=True)
+    old.write_bytes(b"old")
+    fake = FakeLaunchctl()
+    monkeypatch.setattr(launchd, "_run_launchctl", fake)
+
+    launchd.install(port=4317)
+
+    assert not old.exists()
+    assert launchd.PLIST_PATH.exists()
+    bootout_old = next(i for i, call in enumerate(fake.calls)
+                       if call[0] == "bootout" and launchd.LEGACY_LABEL in call[-1])
+    bootstrap_new = next(i for i, call in enumerate(fake.calls) if call[0] == "bootstrap")
+    assert bootout_old < bootstrap_new
+
+
+def test_upgrade_failure_restores_running_old_plist(isolated_paths, monkeypatch):
+    old = isolated_paths / "LaunchAgents" / f"{launchd.LEGACY_LABEL}.plist"
+    old.parent.mkdir(parents=True)
+    old.write_bytes(b"old")
+    calls = []
+    bootstrap_count = 0
+
+    def run(*args):
+        nonlocal bootstrap_count
+        calls.append(args)
+        if args[0] == "bootstrap":
+            bootstrap_count += 1
+            if bootstrap_count == 1:
+                return subprocess.CompletedProcess(args, 1, stdout="", stderr="boom")
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(launchd, "_run_launchctl", run)
+    with pytest.raises(launchd.DaemonInstallerError, match="boom"):
+        launchd.install(port=4317)
+
+    assert old.exists()
+    assert not launchd.PLIST_PATH.exists()
+    assert ("bootstrap", launchd._domain_target(), str(old)) in calls
 
 
 def test_uninstall_removes_plist_and_boots_out(isolated_paths, monkeypatch):

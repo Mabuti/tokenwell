@@ -51,7 +51,11 @@ def install(port: int) -> None:
     """Registers the logon-triggered task. Safe to call again to pick up a
     changed port — /create with /f overwrites an existing task of the same
     name rather than erroring."""
-    _run("schtasks", "/delete", "/tn", LEGACY_TASK_NAME, "/f")
+    old_query = _run("schtasks", "/query", "/tn", LEGACY_TASK_NAME)
+    old_present = old_query.returncode == 0
+    old_running = old_present and "running" in (old_query.stdout or "").lower()
+    if old_running:
+        _run("schtasks", "/end", "/tn", LEGACY_TASK_NAME)
     # pythonw.exe, if present alongside the running interpreter, avoids
     # popping a console window on logon; fall back to the interpreter itself
     # (e.g. a venv that only ships python.exe).
@@ -72,21 +76,33 @@ def install(port: int) -> None:
     out_log = LOG_DIR / "daemon.out.log"
     err_log = LOG_DIR / "daemon.err.log"
     wrapper = LOG_DIR.parent / "daemon_launcher.cmd"
-    wrapper.write_text(
-        "@echo off\r\n"
-        f'"{launcher}" -u -m tokenwell start --port {port} '
-        f'>> "{out_log}" 2>> "{err_log}"\r\n',
-        encoding="ascii",
-    )
+    try:
+        wrapper.write_text(
+            "@echo off\r\n"
+            f'"{launcher}" -u -m tokenwell start --port {port} '
+            f'>> "{out_log}" 2>> "{err_log}"\r\n',
+            encoding="ascii",
+        )
 
-    result = _run(
-        "schtasks", "/create", "/tn", TASK_NAME,
-        "/tr", f'"{wrapper}"',
-        "/sc", "onlogon", "/rl", "limited", "/f",
-    )
-    if result.returncode != 0:
-        raise DaemonInstallerError(f"schtasks /create failed: {(result.stderr or result.stdout).strip()}")
-    start()
+        result = _run(
+            "schtasks", "/create", "/tn", TASK_NAME,
+            "/tr", f'"{wrapper}"',
+            "/sc", "onlogon", "/rl", "limited", "/f",
+        )
+        if result.returncode != 0:
+            raise DaemonInstallerError(f"schtasks /create failed: {(result.stderr or result.stdout).strip()}")
+        started = _run("schtasks", "/run", "/tn", TASK_NAME)
+        if started.returncode != 0:
+            raise DaemonInstallerError(f"schtasks /run failed: {(started.stderr or started.stdout).strip()}")
+    except (OSError, DaemonInstallerError):
+        _run("schtasks", "/delete", "/tn", TASK_NAME, "/f")
+        wrapper.unlink(missing_ok=True)
+        if old_running:
+            _run("schtasks", "/run", "/tn", LEGACY_TASK_NAME)
+        raise
+
+    if old_present:
+        _run("schtasks", "/delete", "/tn", LEGACY_TASK_NAME, "/f")
 
 
 def uninstall() -> None:

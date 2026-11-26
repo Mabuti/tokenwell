@@ -60,6 +60,23 @@ function Install-Tokenwell {
     function Ok($m)   { Write-Host $m -ForegroundColor Green }
     function Warn($m) { Write-Host $m -ForegroundColor Yellow }
 
+    # Keep a recoverable copy before the installer runs any new command. A
+    # reparse point is the migration compatibility path, not user data to copy.
+    $LegacyDataRoot = Join-Path $HOME '.claude-unlimited'
+    $LegacyInstallRoot = Join-Path $HOME '.local\share\claude-unlimited'
+    $legacyItem = Get-Item -LiteralPath $LegacyDataRoot -ErrorAction SilentlyContinue
+    if ($legacyItem -and $legacyItem.PSIsContainer -and
+        -not ($legacyItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        $LegacyBackup = Join-Path $HOME ('.claude-unlimited.bak-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+        if (-not (Test-Path -LiteralPath $LegacyBackup)) {
+            Copy-Item -LiteralPath $LegacyDataRoot -Destination $LegacyBackup -Recurse
+            Say "Backed up legacy data to: $LegacyBackup"
+        }
+    }
+    if (Test-Path -LiteralPath $LegacyInstallRoot -PathType Container) {
+        Say "Old install found at $LegacyInstallRoot; it is no longer used and can be removed after you check the upgrade."
+    }
+
     Say ""
     Say "Tokenwell - Windows installer"
     Say "===================================="
