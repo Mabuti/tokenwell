@@ -70,13 +70,21 @@ def get_token(profile_id: str) -> str:
     token = old.stdout.strip()
     try:
         set_token(profile_id, token)
-        if get_token_new(profile_id) != token:
-            raise SecretStoreError("read-back mismatch")
-        subprocess.run(["secret-tool", "clear", "service", LEGACY_SERVICE, "account", profile_id],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as exc:
         _LOGGER.warning("Tokenwell could not complete legacy secret migration for profile %s: %s",
                         profile_id, exc)
+        return token
+    try:
+        if get_token_new(profile_id) != token:
+            raise SecretStoreError("read-back mismatch")
+    except Exception as exc:
+        subprocess.run(["secret-tool", "clear", "service", SERVICE, "account", profile_id],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _LOGGER.warning("Tokenwell could not complete legacy secret migration for profile %s: %s",
+                        profile_id, exc)
+        return token
+    subprocess.run(["secret-tool", "clear", "service", LEGACY_SERVICE, "account", profile_id],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return token
 
 

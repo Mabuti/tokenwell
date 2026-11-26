@@ -92,8 +92,36 @@ def test_failed_legacy_secret_write_keeps_old_entry():
 
 
 def test_failed_legacy_secret_verify_keeps_old_entry():
-    responses = [_ok(returncode=1), _ok(stdout="legacy-token\n"), _ok(), _ok(stdout="different\n")]
+    responses = [_ok(returncode=1), _ok(stdout="legacy-token\n"), _ok(), _ok(stdout="different\n"), _ok()]
     with patch.object(backend.shutil, "which", return_value="/usr/bin/secret-tool"), \
          patch.object(backend.subprocess, "run", side_effect=responses) as mock_run:
         assert backend.get_token("profile-1") == "legacy-token"
-    assert not any(call.args[0][1] == "clear" for call in mock_run.call_args_list)
+    clear_calls = [call.args[0] for call in mock_run.call_args_list if call.args[0][1] == "clear"]
+    assert clear_calls == [["secret-tool", "clear", "service", "tokenwell.oauth", "account", "profile-1"]]
+
+
+def test_failed_verify_clears_new_entry_so_second_read_uses_legacy():
+    state = {"new": False, "legacy": True}
+
+    def run(command, **kwargs):
+        if command[1] == "lookup":
+            service = command[3]
+            if service == backend.SERVICE and state["new"]:
+                return _ok(stdout="wrong-token\n")
+            if service == backend.LEGACY_SERVICE and state["legacy"]:
+                return _ok(stdout="legacy-token\n")
+            return _ok(returncode=1)
+        if command[1] == "store":
+            state["new"] = True
+        elif command[1] == "clear":
+            state["new"] = False
+            if command[3] == backend.LEGACY_SERVICE:
+                state["legacy"] = False
+        return _ok()
+
+    with patch.object(backend.shutil, "which", return_value="/usr/bin/secret-tool"), \
+         patch.object(backend.subprocess, "run", side_effect=run):
+        assert backend.get_token("profile-1") == "legacy-token"
+        state["legacy"] = True
+        assert backend.get_token("profile-1") == "legacy-token"
+    assert state["new"] is False

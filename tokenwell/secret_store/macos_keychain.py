@@ -42,14 +42,23 @@ def get_token(profile_id: str) -> str:
         token = _get_service_token(_legacy_service(profile_id))
         try:
             set_token(profile_id, token)
-            if _get_service_token(_service(profile_id)) != token:
-                raise RuntimeError("read-back mismatch")
-            subprocess.run(["security", "delete-generic-password", "-a", profile_id,
-                            "-s", _legacy_service(profile_id)],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as exc:
             _LOGGER.warning("Tokenwell could not complete legacy secret migration for profile %s: %s",
                             profile_id, exc)
+            return token
+        try:
+            if _get_service_token(_service(profile_id)) != token:
+                raise RuntimeError("read-back mismatch")
+        except Exception as exc:
+            subprocess.run(["security", "delete-generic-password", "-a", profile_id,
+                            "-s", _service(profile_id)],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _LOGGER.warning("Tokenwell could not complete legacy secret migration for profile %s: %s",
+                            profile_id, exc)
+            return token
+        subprocess.run(["security", "delete-generic-password", "-a", profile_id,
+                        "-s", _legacy_service(profile_id)],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return token
 
 

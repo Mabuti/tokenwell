@@ -72,7 +72,14 @@ def _checkpoint_legacy_db(legacy: Path) -> bool:
         conn.execute("PRAGMA busy_timeout=150")
         conn.execute("BEGIN EXCLUSIVE")
         conn.commit()
-        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        checkpoint = conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+        if checkpoint is None or not checkpoint or checkpoint[0] != 0:
+            _LOGGER.warning("Tokenwell migration skipped: legacy database WAL checkpoint is busy")
+            return False
+        wal = Path(f"{db}-wal")
+        if wal.exists() and wal.stat().st_size != 0:
+            _LOGGER.warning("Tokenwell migration skipped: legacy database WAL was not truncated")
+            return False
         return True
     except sqlite3.Error as exc:
         _LOGGER.warning("Tokenwell migration skipped: legacy database is in use (%s)", exc)
@@ -93,9 +100,16 @@ def migrate_legacy_app_dir() -> Path:
     if legacy.is_symlink():
         return new if new.exists() else legacy
     if new.exists():
-        if legacy.is_dir():
-            _LOGGER.warning("Both Tokenwell data paths exist: %s and %s; using %s", new, legacy, new)
-        return new
+        if (new.is_dir() and not new.is_symlink() and legacy.is_dir() and not legacy.is_symlink()
+                and not _has_migration_data(new) and _has_migration_data(legacy)):
+            try:
+                new.rmdir()
+            except OSError:
+                return legacy
+        if new.exists():
+            if legacy.is_dir():
+                _LOGGER.warning("Both Tokenwell data paths exist: %s and %s; using %s", new, legacy, new)
+            return new
     if not legacy.is_dir():
         return new
     if os.name == "nt":
@@ -110,16 +124,21 @@ def migrate_legacy_app_dir() -> Path:
             return legacy
         if not _checkpoint_legacy_db(legacy):
             return legacy
+        moved: list[tuple[Path, Path]] = []
         try:
             os.rename(legacy, new)
-            old_db = new / _LEGACY_DB_NAME
-            new_db = new / _DB_NAME
-            if old_db.exists() and not new_db.exists():
-                for suffix in ("", "-wal", "-shm"):
-                    source = new / f"{_LEGACY_DB_NAME}{suffix}"
-                    target = new / f"{_DB_NAME}{suffix}"
-                    if source.exists():
-                        os.rename(source, target)
+            sources = [
+                new / f"{_LEGACY_DB_NAME}{suffix}"
+                for suffix in ("-wal", "-shm", "")
+            ]
+            for source in sources:
+                if not source.exists():
+                    continue
+                target = new / source.name.replace(_LEGACY_DB_NAME, _DB_NAME, 1)
+                if target.exists():
+                    raise OSError(f"destination already exists: {target}")
+                os.rename(source, target)
+                moved.append((source, target))
             try:
                 legacy.symlink_to(new, target_is_directory=True)
             except OSError:
@@ -128,8 +147,17 @@ def migrate_legacy_app_dir() -> Path:
             return new
         except OSError as exc:
             _LOGGER.warning("Tokenwell migration failed: %s", exc)
-            if not new.exists() and legacy.exists():
-                return legacy
+            for source, target in reversed(moved):
+                try:
+                    if target.exists() and not source.exists():
+                        os.rename(target, source)
+                except OSError as rollback_exc:
+                    _LOGGER.error("Tokenwell migration rollback failed for %s: %s", target, rollback_exc)
+            try:
+                if new.exists() and not legacy.exists():
+                    os.rename(new, legacy)
+            except OSError as rollback_exc:
+                _LOGGER.error("Tokenwell migration rollback failed for %s: %s", new, rollback_exc)
             return new if new.exists() else legacy
     finally:
         try:
@@ -143,6 +171,13 @@ def migrate_legacy_app_dir() -> Path:
         except (OSError, ImportError):
             pass
         lock.close()
+
+
+def _has_migration_data(directory: Path) -> bool:
+    return any(
+        (directory / name).is_file()
+        for name in ("config.json", _DB_NAME, _LEGACY_DB_NAME)
+    )
 
 
 def env_value(name: str, default=None):
