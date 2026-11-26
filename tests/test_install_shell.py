@@ -20,7 +20,7 @@ def _installer_stub_path(tmp_path):
         "mktemp": "printf '%s\\n' \"$HOME/installer-temp\"\n",
         "rm": "exit 0\n",
         "env": "if [ \"$1\" = bash ]; then shift; exec /bin/bash \"$@\"; fi\nexit 1\n",
-        "bash": "exec /bin/bash \"$@\"\n",
+        "bash": "exec -a bash /bin/bash \"$@\"\n",
     }
     for name, body in stubs.items():
         stub = stub_dir / name
@@ -43,12 +43,12 @@ def _run_real_installer(tmp_path, mode):
     assert bash is not None
 
     if mode == "bash-stdin":
-        command = [bash]
+        command = ["bash"]
         input_data = (ROOT / "install.sh").read_bytes()
     elif mode == "cat-pipe":
         command = [
             "/bin/sh", "-c",
-            f"/bin/cat {shlex.quote(str(ROOT / 'install.sh'))} | {shlex.quote(bash)}",
+            f"/bin/cat {shlex.quote(str(ROOT / 'install.sh'))} | bash",
         ]
         input_data = None
     elif mode == "bash-file":
