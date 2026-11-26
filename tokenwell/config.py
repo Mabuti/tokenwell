@@ -94,6 +94,26 @@ def _checkpoint_legacy_db(legacy: Path) -> bool:
             conn.close()
 
 
+def _before_legacy_db_rename(directory: Path) -> None:
+    """Hook for the final migration race check.
+
+    The production implementation is deliberately empty. Tests use this seam
+    to model a legacy writer appending a WAL frame after the checkpoint and
+    before the directory's database files are renamed.
+    """
+
+
+def _legacy_db_rename_is_safe(directory: Path) -> bool:
+    if _legacy_daemon_is_running(directory):
+        _LOGGER.warning("Tokenwell migration skipped: legacy daemon became active during migration")
+        return False
+    wal = directory / f"{_LEGACY_DB_NAME}-wal"
+    if wal.exists() and wal.stat().st_size != 0:
+        _LOGGER.warning("Tokenwell migration skipped: legacy database WAL grew during migration")
+        return False
+    return True
+
+
 def migrate_legacy_app_dir() -> Path:
     """Resolve the data directory and perform the POSIX one-time migration."""
     new, legacy = _home_paths()
@@ -127,6 +147,9 @@ def migrate_legacy_app_dir() -> Path:
         moved: list[tuple[Path, Path]] = []
         try:
             os.rename(legacy, new)
+            _before_legacy_db_rename(new)
+            if not _legacy_db_rename_is_safe(new):
+                raise OSError("legacy database changed after checkpoint")
             sources = [
                 new / f"{_LEGACY_DB_NAME}{suffix}"
                 for suffix in ("-wal", "-shm", "")

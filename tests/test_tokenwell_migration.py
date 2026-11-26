@@ -131,6 +131,27 @@ def test_wal_pending_frames_migrate_with_data_intact(tmp_path, monkeypatch):
     writer.close()
 
 
+def test_wal_growth_after_checkpoint_rolls_back_to_legacy_layout(tmp_path, monkeypatch):
+    _at_home(monkeypatch, tmp_path)
+    legacy = _legacy_home(tmp_path, db=False)
+    writer = _wal_database(legacy)
+
+    def legacy_writer_after_checkpoint(directory):
+        conn = sqlite3.connect(directory / "claude_unlimited.db")
+        conn.execute("pragma journal_mode=wal")
+        conn.execute("pragma wal_autocheckpoint=0")
+        conn.execute("insert into marker values ('late')")
+        conn.commit()
+        conn.close()
+
+    monkeypatch.setattr(config, "_before_legacy_db_rename", legacy_writer_after_checkpoint)
+    assert config.migrate_legacy_app_dir() == legacy
+    assert legacy.is_dir() and not legacy.is_symlink()
+    assert (legacy / "claude_unlimited.db").exists()
+    assert not (tmp_path / ".tokenwell").exists()
+    writer.close()
+
+
 def test_sidecar_rename_failure_rolls_back_to_legacy_state(tmp_path, monkeypatch):
     _at_home(monkeypatch, tmp_path)
     legacy = _legacy_home(tmp_path, db=False)
