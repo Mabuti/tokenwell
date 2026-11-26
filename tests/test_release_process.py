@@ -55,6 +55,13 @@ def test_installers_defer_migration_until_the_new_daemon_starts():
     assert "$env:TOKENWELL_NO_MIGRATE = '1'" in powershell
 
 
+def test_windows_installer_restores_no_migrate_environment_value():
+    powershell = (ROOT / "install.ps1").read_text(encoding="utf-8")
+    assert "GetEnvironmentVariable('TOKENWELL_NO_MIGRATE', 'Process')" in powershell
+    assert "Remove-Item Env:TOKENWELL_NO_MIGRATE" in powershell
+    assert "$env:TOKENWELL_NO_MIGRATE = $previousNoMigrate" in powershell
+
+
 def test_windows_installer_does_not_assign_power_shell_automatic_variables():
     powershell = (ROOT / "install.ps1").read_text(encoding="utf-8")
     for name in ("PID", "HOME", "Host", "Error", "input", "args", "_", "Matches"):

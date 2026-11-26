@@ -16,6 +16,7 @@ _LEGACY_APP_DIR_NAME = ".claude-unlimited"
 _DB_NAME = "tokenwell.db"
 _LEGACY_DB_NAME = "claude_unlimited.db"
 _MIGRATION_LOCK_NAME = ".tokenwell.migrate.lock"
+MIGRATED_LEGACY_APP_DIR = False
 
 
 def _home_paths() -> tuple[Path, Path]:
@@ -172,6 +173,8 @@ def migrate_legacy_app_dir() -> Path:
                 legacy.symlink_to(new, target_is_directory=True)
             except OSError:
                 _LOGGER.warning("Tokenwell migration moved data to %s but could not create legacy symlink", new)
+            global MIGRATED_LEGACY_APP_DIR
+            MIGRATED_LEGACY_APP_DIR = True
             _LOGGER.info("Migrated legacy Tokenwell data from %s to %s", legacy, new)
             return new
         except OSError as exc:

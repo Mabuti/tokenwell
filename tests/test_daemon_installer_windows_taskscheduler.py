@@ -58,6 +58,28 @@ def test_install_creates_task_and_starts_it():
     assert ("schtasks", "/run", "/tn", backend.TASK_NAME) in calls
 
 
+def test_xml_query_capture_uses_raw_bytes(monkeypatch):
+    definition = b"\xff\xfe<\x00T\x00a\x00s\x00k\x00 />\x00"
+    captured = {}
+
+    def fake_run(args, **kwargs):
+        captured.update(kwargs)
+        return backend.subprocess.CompletedProcess(args, 0, stdout=definition, stderr=b"")
+
+    monkeypatch.setattr(backend.subprocess, "run", fake_run)
+    result = backend._run("schtasks", "/query", "/tn", backend.TASK_NAME, "/xml")
+
+    assert captured["text"] is False
+    assert result.stdout == definition
+
+
+def test_raw_bytes_are_decoded_in_task_scheduler_errors():
+    result = backend.subprocess.CompletedProcess(
+        ["schtasks"], 1, stdout=b"", stderr=b"access denied\xff"
+    )
+    assert backend._result_output(result) == "access denied�"
+
+
 def test_start_delegates_to_a_detached_restart():
     """The process calling start() may be the daemon itself; the restart must
     outlive it, so start() spawns a detached helper rather than killing itself

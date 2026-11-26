@@ -21,7 +21,9 @@
 
 function Install-Tokenwell {
     $ErrorActionPreference = 'Stop'
+    $previousNoMigrate = [Environment]::GetEnvironmentVariable('TOKENWELL_NO_MIGRATE', 'Process')
     $env:TOKENWELL_NO_MIGRATE = '1'
+    try {
     # Old Windows PowerShell defaults to TLS 1.0, which github.com and
     # python.org reject - opt into TLS 1.2 so the downloads below work.
     try {
@@ -110,7 +112,6 @@ function Install-Tokenwell {
         $script:LegacyServiceStopped = $false
     }
 
-    try {
     Stop-LegacyService
 
     # Keep a recoverable copy before the installer runs any new command. A
@@ -631,6 +632,11 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
     Say ""
     } finally {
         Restore-LegacyService
+        if ($null -eq $previousNoMigrate) {
+            Remove-Item Env:TOKENWELL_NO_MIGRATE -ErrorAction SilentlyContinue
+        } else {
+            $env:TOKENWELL_NO_MIGRATE = $previousNoMigrate
+        }
     }
 }
 

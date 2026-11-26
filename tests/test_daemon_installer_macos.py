@@ -57,6 +57,29 @@ def test_install_writes_plist_and_bootstraps(isolated_paths, monkeypatch):
     assert plist["RunAtLoad"] is True
 
 
+def test_rewrite_service_paths_after_migration_updates_plist_only(isolated_paths, monkeypatch):
+    home = isolated_paths / "home"
+    monkeypatch.setattr(launchd.Path, "home", classmethod(lambda cls: home))
+    import plistlib
+
+    old_root = home / ".claude-unlimited"
+    new_root = home / ".tokenwell"
+    isolated_paths.joinpath("LaunchAgents").mkdir(parents=True, exist_ok=True)
+    launchd.PLIST_PATH.write_bytes(plistlib.dumps({
+        "StandardOutPath": str(old_root / "logs" / "daemon.out.log"),
+        "StandardErrorPath": str(old_root / "logs" / "daemon.err.log"),
+    }))
+    calls = []
+    monkeypatch.setattr(launchd, "_run_launchctl", lambda *args: calls.append(args))
+
+    launchd.rewrite_service_paths_after_migration()
+
+    plist = plistlib.loads(launchd.PLIST_PATH.read_bytes())
+    assert plist["StandardOutPath"] == str(new_root / "logs" / "daemon.out.log")
+    assert plist["StandardErrorPath"] == str(new_root / "logs" / "daemon.err.log")
+    assert calls == []
+
+
 def test_install_raises_on_bootstrap_failure(isolated_paths, monkeypatch):
     fail = subprocess.CompletedProcess(["launchctl"], 1, stdout="", stderr="boom")
     fake = FakeLaunchctl(responses={("bootstrap",): fail})

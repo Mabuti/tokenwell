@@ -48,6 +48,39 @@ def test_install_writes_unit_file_enables_and_restarts():
     assert ("enable", "--now", backend.UNIT_NAME) not in calls
 
 
+def test_rewrite_service_paths_after_migration_reloads_without_restarting(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setattr(backend.Path, "home", classmethod(lambda cls: home))
+    old_root = home / ".claude-unlimited"
+    new_root = home / ".tokenwell"
+    backend.UNIT_PATH.parent.mkdir(parents=True)
+    backend.UNIT_PATH.write_text(
+        f"StandardOutput=append:{old_root}/logs/daemon.out.log\n",
+        encoding="utf-8",
+    )
+    calls = []
+    with patch.object(backend, "_run_systemctl", side_effect=lambda *args: calls.append(args) or _ok()):
+        backend.rewrite_service_paths_after_migration()
+
+    assert str(new_root) in backend.UNIT_PATH.read_text(encoding="utf-8")
+    assert str(old_root) not in backend.UNIT_PATH.read_text(encoding="utf-8")
+    assert calls == [("daemon-reload",)]
+
+
+def test_rewrite_service_paths_logs_reload_failure_and_does_not_raise(tmp_path, monkeypatch, caplog):
+    home = tmp_path / "home"
+    monkeypatch.setattr(backend.Path, "home", classmethod(lambda cls: home))
+    backend.UNIT_PATH.parent.mkdir(parents=True)
+    backend.UNIT_PATH.write_text(
+        f"StandardError=append:{home / '.claude-unlimited'}/logs/daemon.err.log\n",
+        encoding="utf-8",
+    )
+    with patch.object(backend, "_run_systemctl", return_value=_ok(returncode=1, stdout="reload failed")):
+        backend.rewrite_service_paths_after_migration()
+
+    assert "reload failed" in caplog.text
+
+
 def test_install_raises_on_systemctl_failure_and_cleans_up_the_unit():
     def selective(*args):
         if args and args[0] == "restart":

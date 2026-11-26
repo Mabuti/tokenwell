@@ -2895,6 +2895,13 @@ def run_foreground(host: str = LOOPBACK_HOST, port: int = DEFAULT_PORT) -> None:
             file=sys.stderr,
         )
         raise
+    if config.MIGRATED_LEGACY_APP_DIR:
+        try:
+            daemon_installer.rewrite_service_paths_after_migration()
+        except Exception:
+            # A stale service definition must never prevent the daemon from
+            # starting. The backend logs the detailed failure where possible.
+            _LOGGER.exception("Tokenwell could not update service paths after data migration")
     # Offline load (cache, else vendored snapshot) — synchronous but reads
     # one small local file, so startup never waits on the network. No fetch
     # happens here at all: refreshing is driven by `code` session launches

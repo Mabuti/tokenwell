@@ -263,17 +263,17 @@ Requires **Python 3.10+**, **git**, and the **`claude`** CLI on your `PATH`.
 ### Upgrading from Claude Unlimited
 
 `install.sh` makes a timestamped copy of a real `~/.claude-unlimited` directory before it runs
-the new installer. On POSIX, `tokenwell install` (which `install.sh` runs) migrates the data to
-`~/.tokenwell`, renames the database and its WAL files, and leaves a compatibility symlink at the
-old path. The service rename happens during `tokenwell install`, not on the first daemon start.
+the new installer. On POSIX, the daemon migrates the data to `~/.tokenwell` when it first starts
+under the new service, renames the database and its WAL files, and leaves a compatibility symlink
+at the old path. `install.sh` and `install.ps1` set `TOKENWELL_NO_MIGRATE=1` for their own checks
+and install command so a failed install can restore the old service; migration then waits for the
+new daemon to start.
 
 On Windows, Tokenwell keeps the legacy `~/.claude-unlimited` directory in use in place; Windows
 does not migrate that directory. When both directories exist, the new one wins only when it
 contains `config.json` or a database. An empty `~/.tokenwell` is removed and the legacy directory
-continues in use; Tokenwell does not merge populated directories. During an upgrade, the installer
-sets `TOKENWELL_NO_MIGRATE=1` for its checks and install command so migration waits for the new
-daemon to start. `cu` and
-`claude-unlimited` continue to work. Installs made with `install.sh` need one reinstall from the
+continues in use; Tokenwell does not merge populated directories. `cu` and `claude-unlimited`
+continue to work. Installs made with `install.sh` need one reinstall from the
 new URL; editable installs need one `pip install -e .`.
 
 Secret-store credentials migrate on read: Tokenwell copies and verifies the new keystore entry,

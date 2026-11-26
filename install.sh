@@ -9,18 +9,18 @@ BIN_DIR="$HOME/.local/bin"
 PATH_NOTE=""
 LEGACY_SERVICE_STOPPED=0
 export TOKENWELL_NO_MIGRATE=1
+SOURCE_DIR=""
+CLONED=""
 
 # Works two ways: run from a checkout (./install.sh), or piped straight from
 # the network (curl … | bash), in which case there is no checkout to copy from
 # and the sources are cloned into a temp directory first.
-if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/pyproject.toml" ]; then
-  SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  CLONED=""
-else
-  SOURCE_DIR="$(mktemp -d)"
-  CLONED="$SOURCE_DIR"
-fi
-cleanup() { [ -n "$CLONED" ] && rm -rf "$CLONED" || true; }
+cleanup() {
+  local cloned="${CLONED:-}"
+  if [ -n "$cloned" ]; then
+    rm -rf "$cloned" || true
+  fi
+}
 
 wait_for_legacy_pid() {
   local pid_file="$HOME/.claude-unlimited/daemon.pid" pid pid_check
@@ -61,7 +61,7 @@ stop_legacy_service() {
 
 restore_legacy_service() {
   [ "$LEGACY_SERVICE_STOPPED" -eq 1 ] || return 0
-  local legacy_data="$HOME/.claude-unlimited" new_data="$HOME/.tokenwell" legacy_target
+  local legacy_data="$HOME/.claude-unlimited" new_data="$HOME/.tokenwell" legacy_target="" plist=""
   if [ -f "$new_data/tokenwell.db" ]; then
     if [ -L "$legacy_data" ]; then
       legacy_target="$(readlink "$legacy_data" 2>/dev/null || true)"
@@ -74,14 +74,20 @@ restore_legacy_service() {
   fi
   case "$(uname -s)" in
     Linux)
-      systemctl --user start claude-unlimited.service >/dev/null 2>&1 || \
+      if systemctl --user start claude-unlimited.service >/dev/null 2>&1; then
+        echo "Legacy service restored after the failed upgrade." >&2
+      else
         echo "Could not restart claude-unlimited.service after the failed upgrade." >&2
+      fi
       ;;
     Darwin)
-      local plist="$HOME/Library/LaunchAgents/com.claude-unlimited.daemon.plist"
+      plist="$HOME/Library/LaunchAgents/com.claude-unlimited.daemon.plist"
       if [ -f "$plist" ]; then
-        launchctl bootstrap "gui/$(id -u)" "$plist" >/dev/null 2>&1 || \
+        if launchctl bootstrap "gui/$(id -u)" "$plist" >/dev/null 2>&1; then
+          echo "Legacy service restored after the failed upgrade." >&2
+        else
           echo "Could not restart com.claude-unlimited.daemon after the failed upgrade." >&2
+        fi
       else
         echo "Could not restart com.claude-unlimited.daemon: its plist is missing." >&2
       fi
@@ -92,10 +98,20 @@ restore_legacy_service() {
 
 on_exit() {
   local status=$?
-  if [ "$LEGACY_SERVICE_STOPPED" -eq 1 ]; then restore_legacy_service; fi
+  if [ "${LEGACY_SERVICE_STOPPED:-0}" -eq 1 ]; then
+    restore_legacy_service || true
+  fi
   cleanup
   return "$status"
 }
+
+main() {
+if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/pyproject.toml" ]; then
+  SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+  SOURCE_DIR="$(mktemp -d)"
+  CLONED="$SOURCE_DIR"
+fi
 trap on_exit EXIT
 
 echo "Tokenwell installer"
@@ -237,7 +253,7 @@ if INSTALL_OUTPUT="$("$CLI" install --port "$PORT" 2>&1)"; then
   LEGACY_SERVICE_STOPPED=0
 else
   echo "$INSTALL_OUTPUT" >&2
-  echo "Background service: could not be installed — the legacy service was restored" >&2
+  echo "Background service: could not be installed." >&2
   exit 1
 fi
 
@@ -280,4 +296,9 @@ if [ -n "$PATH_NOTE" ]; then
   echo
   echo "Before using the commands above, add $BIN_DIR to your PATH:"
   echo '  export PATH="$HOME/.local/bin:$PATH"'
+fi
+}
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
 fi

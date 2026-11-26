@@ -12,6 +12,7 @@ import os
 import plistlib
 import subprocess
 import sys
+import logging
 from pathlib import Path
 from ..config import APP_DIR
 
@@ -21,6 +22,7 @@ LAUNCH_AGENTS_DIR = Path.home() / "Library" / "LaunchAgents"
 PLIST_PATH = LAUNCH_AGENTS_DIR / f"{LABEL}.plist"
 LEGACY_PLIST_PATH = LAUNCH_AGENTS_DIR / f"{LEGACY_LABEL}.plist"
 LOG_DIR = APP_DIR / "logs"
+_LOGGER = logging.getLogger(__name__)
 
 
 class DaemonInstallerError(RuntimeError):
@@ -56,6 +58,26 @@ def _domain_target() -> str:
 
 def _run_launchctl(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["launchctl", *args], capture_output=True, text=True)
+
+
+def rewrite_service_paths_after_migration() -> None:
+    """Rewrite launchd log paths after the daemon migrates its data."""
+    old_root = str(Path.home() / ".claude-unlimited")
+    new_root = str(Path.home() / ".tokenwell")
+    try:
+        if not PLIST_PATH.is_file():
+            return
+        plist = plistlib.loads(PLIST_PATH.read_bytes())
+        changed = False
+        for key in ("StandardOutPath", "StandardErrorPath"):
+            value = plist.get(key)
+            if isinstance(value, str) and old_root in value:
+                plist[key] = value.replace(old_root, new_root)
+                changed = True
+        if changed:
+            PLIST_PATH.write_bytes(plistlib.dumps(plist))
+    except Exception:
+        _LOGGER.exception("Tokenwell could not update launchd log paths after migration")
 
 
 def install(port: int) -> None:

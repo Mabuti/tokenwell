@@ -16,6 +16,7 @@ from __future__ import annotations
 import shlex
 import shutil
 import subprocess
+import logging
 from pathlib import Path
 
 from ..config import APP_DIR
@@ -26,6 +27,7 @@ UNIT_DIR = Path.home() / ".config" / "systemd" / "user"
 UNIT_PATH = UNIT_DIR / UNIT_NAME
 LEGACY_UNIT_PATH = UNIT_DIR / LEGACY_UNIT_NAME
 LOG_DIR = APP_DIR / "logs"
+_LOGGER = logging.getLogger(__name__)
 
 
 class DaemonInstallerError(RuntimeError):
@@ -124,6 +126,31 @@ def _unit_contents(port: int) -> str:
         "[Install]\n"
         "WantedBy=default.target\n"
     )
+
+
+def rewrite_service_paths_after_migration() -> None:
+    """Move service log paths off the legacy data directory after migration.
+
+    The installer deliberately resolves the legacy directory while migration is
+    disabled.  The first daemon start may therefore find an installed unit
+    whose log paths still name that directory.  Rewrite only those paths and
+    reload systemd; the running service is not restarted here.
+    """
+    old_root = str(Path.home() / ".claude-unlimited")
+    new_root = str(Path.home() / ".tokenwell")
+    try:
+        if not UNIT_PATH.is_file():
+            return
+        contents = UNIT_PATH.read_text(encoding="utf-8")
+        if old_root not in contents:
+            return
+        UNIT_PATH.write_text(contents.replace(old_root, new_root), encoding="utf-8")
+        result = _run_systemctl("daemon-reload")
+        if result.returncode != 0:
+            _LOGGER.warning("Tokenwell could not reload systemd after updating migrated log paths: %s",
+                            (result.stderr or result.stdout).strip())
+    except Exception:
+        _LOGGER.exception("Tokenwell could not update systemd log paths after migration")
 
 
 def _enable_linger() -> None:

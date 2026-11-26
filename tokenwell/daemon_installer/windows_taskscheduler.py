@@ -74,6 +74,15 @@ def _run(*args: str) -> subprocess.CompletedProcess:
                           creationflags=_NO_WINDOW)
 
 
+def rewrite_service_paths_after_migration() -> None:
+    """Windows keeps the legacy data directory in place, so no rewrite applies."""
+
+
+def _result_output(result: subprocess.CompletedProcess) -> str:
+    value = result.stderr or result.stdout or ""
+    return value.decode(errors="replace") if isinstance(value, bytes) else value
+
+
 def install(port: int) -> None:
     """Registers the logon-triggered task. Safe to call again to pick up a
     changed port — /create with /f overwrites an existing task of the same
@@ -125,10 +134,10 @@ def install(port: int) -> None:
             "/sc", "onlogon", "/rl", "limited", "/f",
         )
         if result.returncode != 0:
-            raise DaemonInstallerError(f"schtasks /create failed: {(result.stderr or result.stdout).strip()}")
+            raise DaemonInstallerError(f"schtasks /create failed: {_result_output(result).strip()}")
         started = _run("schtasks", "/run", "/tn", TASK_NAME)
         if started.returncode != 0:
-            raise DaemonInstallerError(f"schtasks /run failed: {(started.stderr or started.stdout).strip()}")
+            raise DaemonInstallerError(f"schtasks /run failed: {_result_output(started).strip()}")
     except (OSError, DaemonInstallerError) as exc:
         rollback_errors = [str(exc)]
         try:
@@ -136,7 +145,7 @@ def install(port: int) -> None:
             if deleted.returncode != 0:
                 raise DaemonInstallerError(
                     f"schtasks Tokenwell delete rollback failed: "
-                    f"{(deleted.stderr or deleted.stdout).strip()}")
+                    f"{_result_output(deleted).strip()}")
         except (OSError, subprocess.SubprocessError) as rollback_exc:
             rollback_errors.append(f"schtasks Tokenwell delete rollback failed: {rollback_exc}")
         except DaemonInstallerError as rollback_exc:
@@ -160,13 +169,13 @@ def install(port: int) -> None:
                                 "/xml", str(backup_path), "/f")
                 if restored.returncode != 0:
                     raise DaemonInstallerError(
-                        f"schtasks restore failed: {(restored.stderr or restored.stdout).strip()}")
+                        f"schtasks restore failed: {_result_output(restored).strip()}")
                 if new_running:
                     started_again = _run("schtasks", "/run", "/tn", TASK_NAME)
                     if started_again.returncode != 0:
                         raise DaemonInstallerError(
                             f"schtasks Tokenwell state restore failed: "
-                            f"{(started_again.stderr or started_again.stdout).strip()}")
+                            f"{_result_output(started_again).strip()}")
             except (OSError, DaemonInstallerError) as rollback_exc:
                 rollback_errors.append(str(rollback_exc))
             finally:
@@ -184,7 +193,7 @@ def install(port: int) -> None:
                     if restored.returncode != 0:
                         raise DaemonInstallerError(
                             f"schtasks legacy rollback failed: "
-                            f"{(restored.stderr or restored.stdout).strip()}")
+                            f"{_result_output(restored).strip()}")
                 except (OSError, DaemonInstallerError) as rollback_exc:
                     rollback_errors.append(str(rollback_exc))
         raise DaemonInstallerError("; ".join(error for error in rollback_errors if error)) from exc
@@ -296,4 +305,4 @@ def stop() -> None:
             "Refusing to kill it.")
     result = _run("taskkill", "/pid", str(pid), "/f")
     if result.returncode != 0:
-        raise DaemonInstallerError(f"taskkill failed: {(result.stderr or result.stdout).strip()}")
+        raise DaemonInstallerError(f"taskkill failed: {_result_output(result).strip()}")

@@ -370,6 +370,7 @@ def test_startup_fires_exactly_one_backfill_pass(env, monkeypatch, tmp_path):
     async wrapper once — the fourth kind of untriggered request AGENTS.md
     now documents."""
     backfill_calls = []
+    rewrite_calls = []
     thread_targets = []
 
     class _FakeServer:
@@ -391,6 +392,11 @@ def test_startup_fires_exactly_one_backfill_pass(env, monkeypatch, tmp_path):
     monkeypatch.setattr(daemon, "make_server", lambda host, port: _FakeServer())
     monkeypatch.setattr(daemon.model_catalogue, "initialize", lambda: None)
     monkeypatch.setattr(daemon.updater, "ensure_cli_aliases", lambda: None)
+    monkeypatch.setattr(daemon.config, "MIGRATED_LEGACY_APP_DIR", True)
+    monkeypatch.setattr(
+        daemon.daemon_installer, "rewrite_service_paths_after_migration",
+        lambda: rewrite_calls.append(1),
+    )
     # Scoped to the daemon module's own attribute so the real threading module
     # is untouched for everything else running in this process.
     monkeypatch.setattr(daemon, "threading", types.SimpleNamespace(Thread=_FakeThread))
@@ -402,4 +408,5 @@ def test_startup_fires_exactly_one_backfill_pass(env, monkeypatch, tmp_path):
     daemon.run_foreground(host="127.0.0.1", port=4317)
 
     assert backfill_calls == [1]
+    assert rewrite_calls == [1]
     assert "_oauth_refresh_loop" in thread_targets

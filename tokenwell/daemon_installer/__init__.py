@@ -13,13 +13,16 @@ import platform
 _SYSTEM = platform.system()
 
 if _SYSTEM == "Darwin":
-    from .macos_launchd import DaemonInstallerError, install, is_installed, start, status, stop, uninstall
+    from .macos_launchd import (DaemonInstallerError, install, is_installed, rewrite_service_paths_after_migration,
+                                start, status, stop, uninstall)
 elif _SYSTEM == "Linux":
     # UNVERIFIED — see linux_systemd.py's module docstring.
-    from .linux_systemd import DaemonInstallerError, install, is_installed, start, status, stop, uninstall
+    from .linux_systemd import (DaemonInstallerError, install, is_installed, rewrite_service_paths_after_migration,
+                                start, status, stop, uninstall)
 elif _SYSTEM == "Windows":
     # UNVERIFIED — see windows_taskscheduler.py's module docstring.
-    from .windows_taskscheduler import DaemonInstallerError, install, is_installed, start, status, stop, uninstall
+    from .windows_taskscheduler import (DaemonInstallerError, install, is_installed,
+                                        rewrite_service_paths_after_migration, start, status, stop, uninstall)
 else:
     class DaemonInstallerError(RuntimeError):
         pass
@@ -33,6 +36,7 @@ else:
         )
 
     install = uninstall = start = stop = _unsupported
+    rewrite_service_paths_after_migration = _unsupported
 
     def is_installed() -> bool:
         return False
