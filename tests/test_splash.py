@@ -44,6 +44,8 @@ def test_animation_is_gated_by_quiet(monkeypatch):
 
 
 def test_no_color_shows_static_logo_without_any_escape_codes(monkeypatch):
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("TOKENWELL_NO_ANIMATION", raising=False)
     monkeypatch.setenv("NO_COLOR", "")
     stream = TTYBuffer()
     monkeypatch.setattr(splash.time, "sleep", pytest.fail)
