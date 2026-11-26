@@ -1,25 +1,25 @@
-# Claude Unlimited - one-line Windows installer.
+# Tokenwell - one-line Windows installer.
 #
 # This is the Windows analogue of install.sh. It bootstraps EVERYTHING on a
 # bare machine: if Python is missing it downloads and installs it for your
-# user (no admin needed), then installs Claude Unlimited straight from GitHub
+# user (no admin needed), then installs Tokenwell straight from GitHub
 # (no git needed), registers it to run in the background, and opens the
 # dashboard.
 #
 # Run it from PowerShell:
-#     irm https://raw.githubusercontent.com/Mabuti/claude-unlimited/main/install.ps1 | iex
+#     irm https://raw.githubusercontent.com/Mabuti/tokenwell/main/install.ps1 | iex
 #
 # ...or from the classic Command Prompt / the Win+R "Run" box:
-#     powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://raw.githubusercontent.com/Mabuti/claude-unlimited/main/install.ps1 | iex"
+#     powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://raw.githubusercontent.com/Mabuti/tokenwell/main/install.ps1 | iex"
 #
 # Nothing here needs administrator rights. (If you DO run it from an elevated
 # terminal, it will also set the daemon to auto-start at logon.)
 #
 # Optional environment overrides, set before running:
-#     $env:CLAUDE_UNLIMITED_BRANCH = "main"   # git branch/tag to install
-#     $env:CLAUDE_UNLIMITED_PORT   = "4317"   # dashboard/proxy port
+#     $env:TOKENWELL_BRANCH = "main"   # git branch/tag to install
+#     $env:TOKENWELL_PORT   = "4317"   # dashboard/proxy port
 
-function Install-ClaudeUnlimited {
+function Install-Tokenwell {
     $ErrorActionPreference = 'Stop'
     # Old Windows PowerShell defaults to TLS 1.0, which github.com and
     # python.org reject - opt into TLS 1.2 so the downloads below work.
@@ -40,9 +40,9 @@ function Install-ClaudeUnlimited {
         } catch {}
     }
 
-    $Repo   = 'https://github.com/Mabuti/claude-unlimited'
-    $Branch = if ($env:CLAUDE_UNLIMITED_BRANCH) { $env:CLAUDE_UNLIMITED_BRANCH } else { 'main' }
-    $Port   = if ($env:CLAUDE_UNLIMITED_PORT)   { $env:CLAUDE_UNLIMITED_PORT }   else { '4317' }
+    $Repo   = 'https://github.com/Mabuti/tokenwell'
+    $Branch = if ($env:TOKENWELL_BRANCH) { $env:TOKENWELL_BRANCH } elseif ($env:CLAUDE_UNLIMITED_BRANCH) { $env:CLAUDE_UNLIMITED_BRANCH } else { 'main' }
+    $Port   = if ($env:TOKENWELL_PORT)   { $env:TOKENWELL_PORT } elseif ($env:CLAUDE_UNLIMITED_PORT) { $env:CLAUDE_UNLIMITED_PORT } else { '4317' }
     $PyVer  = '3.12.7'   # only used when Python has to be installed; bump freely
 
     # PROCESSOR_ARCHITECTURE reports x86 inside a 32-bit PowerShell running on
@@ -61,7 +61,7 @@ function Install-ClaudeUnlimited {
     function Warn($m) { Write-Host $m -ForegroundColor Yellow }
 
     Say ""
-    Say "Claude Unlimited - Windows installer"
+    Say "Tokenwell - Windows installer"
     Say "===================================="
 
     # --- 0. A wrong PC clock breaks every HTTPS download ---------------------
@@ -296,8 +296,8 @@ if ([math]::Abs(((Get-Date).ToUniversalTime() - `$net).TotalMinutes) -gt 2) {
     function Invoke-Py { $pre = @($py.Args | Where-Object { $_ }); & $py.Exe @pre @args }
     Ok ("Python: " + (Invoke-Py -c "import sys;print(sys.version.split()[0])"))
 
-    # --- 2. Install Claude Unlimited from the branch zip (no git needed) -----
-    Say "Installing Claude Unlimited..."
+    # --- 2. Install Tokenwell from the branch zip (no git needed) -----
+    Say "Installing Tokenwell..."
 
     # pip refuses --user inside an active virtualenv, and someone will run this
     # from one. Ask the interpreter which case we are in rather than guessing.
@@ -321,7 +321,7 @@ if ([math]::Abs(((Get-Date).ToUniversalTime() - `$net).TotalMinutes) -gt 2) {
     # --log instead of 2>&1: redirecting a native command's stderr in Windows
     # PowerShell turns each line into an error record, which $ErrorActionPreference
     # = 'Stop' would treat as a failure even on success.
-    $pipLog = Join-Path $env:TEMP 'claude-unlimited-pip.log'
+    $pipLog = Join-Path $env:TEMP 'tokenwell-pip.log'
     Invoke-Py -m pip install @userFlag --upgrade --upgrade-strategy only-if-needed `
         --disable-pip-version-check --log $pipLog "$Repo/archive/refs/heads/$Branch.zip"
     if ($LASTEXITCODE -ne 0) {
@@ -361,12 +361,12 @@ if ([math]::Abs(((Get-Date).ToUniversalTime() - `$net).TotalMinutes) -gt 2) {
         }
     }
 
-    # --- 3. Put the `claude-unlimited` command on PATH -----------------------
+    # --- 3. Put the `tokenwell` command on PATH -----------------------
     $scripts = (Invoke-Py -c "import sysconfig,sys;print(sysconfig.get_path('scripts') if sys.prefix!=sys.base_prefix else sysconfig.get_path('scripts','nt_user'))").Trim()
-    $exe = Join-Path $scripts 'claude-unlimited.exe'
+    $exe = Join-Path $scripts 'tokenwell.exe'
     # Kept even when the .exe is missing: it is what we tell people to type if
     # PATH does not take effect, and the module form always works.
-    $exeHint = if (Test-Path $exe) { $exe } else { "$($py.Exe) -m claude_unlimited" }
+    $exeHint = if (Test-Path $exe) { $exe } else { "$($py.Exe) -m tokenwell" }
     if (-not (Test-Path $exe)) { $exe = $null }
     # Go through the registry, preserving the value's KIND. Reading PATH with
     # [Environment]::GetEnvironmentVariable EXPANDS any %VARS% in it, so writing
@@ -450,16 +450,16 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
     function Install-Launcher {
         # Generates one launcher; called for both command names so the short
         # alias `cu` works from an already-open terminal too.
-        param([string]$Name = 'claude-unlimited')
+        param([string]$Name = 'tokenwell')
         $dir = Join-Path $env:LocalAppData 'Microsoft\WindowsApps'
         if (-not (Test-Path $dir)) { return $null }
         $pre  = @($py.Args | Where-Object { $_ })
         $args = if ($pre) { ($pre -join ' ') + ' ' } else { '' }
         # Absolute paths, resolved here at install time, on purpose: `-m
-        # claude_unlimited` would make the launcher depend on Python locating
+        # tokenwell` would make the launcher depend on Python locating
         # the per-user site-packages directory, which it derives from %APPDATA%
         # - and a session with a different or missing APPDATA then fails with
-        # "No module named claude_unlimited". The module form stays only as a
+        # "No module named tokenwell". The module form stays only as a
         # fallback for when pip generated no .exe. CRLF endings are required:
         # cmd.exe misparses a batch file with bare LF and reports "cannot find
         # the path specified".
@@ -467,7 +467,7 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
         # PYTHONPATH pinned to the absolute install directory. A --user install
         # is only importable via the per-user site-packages path, which Python
         # derives from %APPDATA% - so a session where that variable is missing
-        # or different fails with "No module named claude_unlimited", and pip's
+        # or different fails with "No module named tokenwell", and pip's
         # own generated .exe fails identically. Naming the directory outright
         # removes that dependency.
         # Asked of the package itself rather than assumed from sysconfig, so it
@@ -476,13 +476,13 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
         # Two directories: where the package itself lives (asked of the package,
         # so an editable install pointing at a source tree is handled too), and
         # the per-user site-packages its DEPENDENCIES live in.
-        $site = (Invoke-Py -c "import os,sysconfig,claude_unlimited;pkg=os.path.dirname(os.path.dirname(os.path.abspath(claude_unlimited.__file__)));deps=sysconfig.get_path('purelib','nt_user');print(pkg if pkg==deps else pkg+';'+deps)").Trim()
-        $text = "@echo off`r`nrem Claude Unlimited launcher (installer-generated).`r`n" +
+        $site = (Invoke-Py -c "import os,sysconfig,tokenwell;pkg=os.path.dirname(os.path.dirname(os.path.abspath(tokenwell.__file__)));deps=sysconfig.get_path('purelib','nt_user');print(pkg if pkg==deps else pkg+';'+deps)").Trim()
+        $text = "@echo off`r`nrem Tokenwell launcher (installer-generated).`r`n" +
                 ("if not defined PYTHONPATH (set `"PYTHONPATH=$site`") else (set `"PYTHONPATH=$site;%PYTHONPATH%`")`r`n") +
                 ("if exist `"$exePath`" (`r`n") +
                 ("  `"$exePath`" %*`r`n") +
                 (") else (`r`n") +
-                ('  "{0}" {1}-m claude_unlimited %*' -f $py.Exe, $args) + "`r`n" +
+                ('  "{0}" {1}-m tokenwell %*' -f $py.Exe, $args) + "`r`n" +
                 (")`r`n")
         $file = Join-Path $dir "$Name.cmd"
         try {
@@ -493,23 +493,25 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
         }
     }
 
-    $launcher = Install-Launcher -Name 'claude-unlimited'
+    $launcher = Install-Launcher -Name 'tokenwell'
     if ($launcher) { Ok "Installed launcher: $launcher" }
     # The short alias `cu` — same launcher, second name.
     $null = Install-Launcher -Name 'cu'
+    $null = Install-Launcher -Name 'tw'
+    $null = Install-Launcher -Name 'claude-unlimited'
 
-    if (Test-CommandVisible 'claude-unlimited') {
-        Ok "'claude-unlimited' is on your PATH - open a NEW terminal to use it (windows"
+    if (Test-CommandVisible 'tokenwell') {
+        Ok "'tokenwell' is on your PATH - open a NEW terminal to use it (windows"
         Ok "that are already open keep the PATH they started with)."
     } else {
-        Warn "'claude-unlimited' is not on your PATH yet. Run it by full path:"
+        Warn "'tokenwell' is not on your PATH yet. Run it by full path:"
         Warn "    $exeHint"
         Warn "...or sign out and back in, which reloads the environment everywhere."
     }
 
     # Invoke the CLI whether or not this session's PATH picked up the new
     # Scripts dir: prefer the resolved .exe, else the module form.
-    function Invoke-CU { if ($exe) { & $exe @args } else { Invoke-Py -m claude_unlimited @args } }
+    function Invoke-CU { if ($exe) { & $exe @args } else { Invoke-Py -m tokenwell @args } }
 
     # --- 4. Sanity-check the install -----------------------------------------
     Say ""
@@ -517,7 +519,8 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
 
     # --- 5. Register the background service ----------------------------------
     Say ""
-    Say "Setting Claude Unlimited to run in the background..."
+    Say "Setting Tokenwell to run in the background..."
+    & schtasks.exe /delete /tn 'ClaudeUnlimitedDaemon' /f 2>$null | Out-Null
     $registered = $false
     try {
         Invoke-CU install --port $Port
@@ -525,13 +528,13 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
     } catch {}
     if (-not $registered) {
         Warn "Couldn't register the auto-start task - that step needs an elevated terminal."
-        Warn "Starting Claude Unlimited for this session instead. To have it start"
+        Warn "Starting Tokenwell for this session instead. To have it start"
         Warn "automatically every time you log in, re-run this installer from an"
         Warn "Administrator PowerShell."
         # Detached so the daemon outlives this window.
         $pre = @($py.Args | Where-Object { $_ })
         Start-Process -WindowStyle Hidden -FilePath $py.Exe `
-            -ArgumentList ($pre + @('-m','claude_unlimited','start','--port',$Port))
+            -ArgumentList ($pre + @('-m','tokenwell','start','--port',$Port))
     }
 
     # --- 6. Wait for it to answer, then open the dashboard -------------------
@@ -547,23 +550,23 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
 
     Say ""
     if ($up) {
-        Ok  "Claude Unlimited is running."
+        Ok  "Tokenwell is running."
         Ok  "Dashboard: $dash"
         try { Start-Process $dash } catch {}
     } else {
         Warn "The daemon didn't answer yet - give it a moment, then open: $dash"
-        Warn "or start it yourself with:  claude-unlimited start"
+        Warn "or start it yourself with:  tokenwell start"
     }
 
     Say ""
     Say "Next steps:"
-    Say "  1. Add an account:            claude-unlimited add-account   (or use the dashboard)"
-    Say "  2. Run Claude Code through it: claude-unlimited code"
-    Say "  3. Run Codex through it:       claude-unlimited codex   (needs claude-unlimited add-codex-account)"
+    Say "  1. Add an account:            tokenwell add-account   (or use the dashboard)"
+    Say "  2. Run Claude Code through it: tokenwell code"
+    Say "  3. Run Codex through it:       tokenwell codex   (needs tokenwell add-codex-account)"
     Say ""
-    Say "(If 'claude-unlimited' isn't recognized, open a NEW terminal first, or use"
-    Say " 'py -m claude_unlimited' instead.)"
+    Say "(If 'tokenwell' isn't recognized, open a NEW terminal first, or use"
+    Say " 'py -m tokenwell' instead.)"
     Say ""
 }
 
-Install-ClaudeUnlimited
+Install-Tokenwell

@@ -1,6 +1,6 @@
 # Architecture
 
-How Claude Unlimited is put together. Start with [`README.md`](../README.md) for what it
+How Tokenwell is put together. Start with [`README.md`](../README.md) for what it
 does; this is the map for someone about to change it.
 
 See [`docs/adr/`](adr/) for why specific calls were made, and
@@ -516,7 +516,7 @@ Codex quota is spent on reasoning tokens produced × model tier, not on context 
 
 ## The Claude desktop app
 
-`claude-unlimited desktop` points the desktop app's inference at the pool. The app calls
+`tokenwell desktop` points the desktop app's inference at the pool. The app calls
 this third-party inference mode and runs it from a **separate** userData directory,
 `~/Library/Application Support/Claude-3p/`, which is why none of it appears in the normal
 profile. The settings live in `configLibrary/<uuid>.json` with a `_meta.json` naming the
@@ -534,7 +534,7 @@ Two constraints shape the command:
 
 ## Environment parity with plain `claude`
 
-`claude-unlimited code` must give a project exactly what plain `claude` gives it. It adds
+`tokenwell code` must give a project exactly what plain `claude` gives it. It adds
 only `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` and the model labels, then `execvp`s the
 same binary in the same directory. It never sets `CLAUDE_CONFIG_DIR` — that is used only
 by the `add-account`/`reauth` subprocesses — so `~/.claude`, `CLAUDE.md`, skills, agents

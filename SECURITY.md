@@ -1,18 +1,18 @@
 # Security
 
-Claude Unlimited is a local daemon holding real Anthropic credentials on your own machine. This document explains its security model and how to report a problem.
+Tokenwell is a local daemon holding real Anthropic credentials on your own machine. This document explains its security model and how to report a problem.
 
 ## Threat model
 
-Claude Unlimited defends against:
+Tokenwell defends against:
 
 - **A malicious website in your browser.** The daemon binds to `127.0.0.1` only and validates the `Host` header on every request (blocking DNS-rebinding), so a page open in another tab can't reach the Dashboard's API. State-changing requests additionally require a per-run CSRF token that only same-origin JavaScript can obtain.
 - **Another process on your machine reading credentials off disk.** Credentials never touch disk in plain text — they're stored in the OS's native secret store (macOS Keychain, Linux Secret Service, Windows DPAPI) and never appear in `config.json`, logs, or any API response.
 - **XSS via a crafted Profile name, project name, or model string.** Every piece of user- or upstream-controlled text is HTML-escaped before being rendered in the Dashboard.
 
-Claude Unlimited does **not** defend against:
+Tokenwell does **not** defend against:
 
-- **Someone with your OS user account already logged in.** Filesystem-level access to `~/.claude-unlimited` and your OS's secret store is the same trust boundary every local credential manager (browser password store, `gh` CLI, `git credential` helpers) relies on. If your machine is compromised at that level, this project's security model doesn't add protection beyond what those already assume.
+- **Someone with your OS user account already logged in.** Filesystem-level access to `~/.tokenwell` and your OS's secret store is the same trust boundary every local credential manager (browser password store, `gh` CLI, `git credential` helpers) relies on. If your machine is compromised at that level, this project's security model doesn't add protection beyond what those already assume.
 - **A malicious or compromised upstream gateway you've configured as an API/gateway Profile.** You're choosing what to point a Profile's `base_url` at; the daemon substitutes credentials into whatever you configured.
 
 ## What never leaves your machine

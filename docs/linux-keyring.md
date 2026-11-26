@@ -1,11 +1,15 @@
 # Linux and WSL: the login keyring, and what happens after a reboot
 
+When upgrading from Claude Unlimited, the installer copies files from an existing
+`~/.config/systemd/user/claude-unlimited.service.d/` drop-in directory into
+`tokenwell.service.d/` without overwriting files already there, then reloads systemd.
+
 This applies to any Linux install, and especially to **WSL**, where the failure mode
 below is close to guaranteed rather than occasional.
 
 ## What the tool needs and why
 
-On Linux, Claude Unlimited stores every OAuth token in your **Secret Service**
+On Linux, Tokenwell stores every OAuth token in your **Secret Service**
 provider — in practice, the **GNOME login keyring** (`gnome-keyring-daemon`), read and
 written through the `secret-tool` CLI (package `libsecret-tools`). This needs a running
 D-Bus session and an *unlocked* keyring collection; if either is missing, every token
@@ -25,7 +29,7 @@ After a reboot (or, on a real desktop, sometimes after a suspend/resume), you ma
 - the dashboard stuck on **"Loading…"**;
 - every request failing with something like
   `429 … every configured account is exhausted or cooling down`;
-- and, confusingly, running `claude-unlimited reauth` reports **"No OAuth Profile
+- and, confusingly, running `tokenwell reauth` reports **"No OAuth Profile
   currently needs re-authentication"** — while every request still 429s.
 
 Read that last line for what it is: **nothing is actually exhausted.** The daemon
@@ -47,7 +51,7 @@ with no keyring-unlock ever having happened. The first thing that touches the ke
 nowhere to render, or finds the collection locked and gets nothing back.
 
 The same "no GUI to hand off to" gap shows up in the browser login flow too: on WSL,
-`claude-unlimited add-account` (and `add-codex-account`) does not open a browser window
+`tokenwell add-account` (and `add-codex-account`) does not open a browser window
 for you, because there is no browser integration between WSL and the Windows desktop by
 default. You need to copy the login URL it prints and open it yourself in a Windows
 browser, then paste the resulting authorization code back into the terminal. This is a
@@ -67,13 +71,13 @@ a cold boot.
 
 ### 1. The unlock script
 
-Save as `~/.local/bin/claude-unlimited-keyring-unlock`, `chmod +x` it. The default
+Save as `~/.local/bin/tokenwell-keyring-unlock`, `chmod +x` it. The default
 `PASSWORD_CMD` reads the password file section 4 creates — only edit that line if you
 want a password manager instead.
 
 ```bash
 #!/bin/bash
-# Unlock the GNOME login keyring non-interactively so claude-unlimited can
+# Unlock the GNOME login keyring non-interactively so tokenwell can
 # read its OAuth tokens without a human at a dialog. Idempotent. Safe to run
 # by hand or from a systemd --user unit at login.
 #
@@ -81,7 +85,7 @@ want a password manager instead.
 # after every reboot the daemon came up, blocked on a GUI password prompt, and
 # every request failed with "No eligible Profile".
 #
-# Why it stops claude-unlimited first: the daemon polls secret-tool constantly,
+# Why it stops tokenwell first: the daemon polls secret-tool constantly,
 # and the instant gnome-keyring is restarted it D-Bus-activates a competing
 # instance that loads the keyring LOCKED and wins the org.freedesktop.secrets
 # name. Measured, not theoretical.
@@ -91,7 +95,7 @@ set -u
 # works instead — swap in your password manager's CLI if you have one:
 #   PASSWORD_CMD='pass show gnome-keyring/login'
 # Never use secret-tool here: it reads the keyring this script unlocks.
-PASSWORD_CMD='cat ~/.config/claude-unlimited/keyring-password'
+PASSWORD_CMD='cat ~/.config/tokenwell/keyring-password'
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
 locked() { busctl --user call org.freedesktop.secrets /org/freedesktop/secrets/collection/login \
@@ -106,8 +110,8 @@ pw="$(eval "$PASSWORD_CMD" 2>/dev/null | tr -d '\n')"
 if [ -z "$pw" ]; then echo "FAILED: PASSWORD_CMD printed nothing" >&2; exit 1; fi
 
 was_active=0
-if systemctl --user is-active --quiet claude-unlimited.service; then
-  was_active=1; systemctl --user stop claude-unlimited.service
+if systemctl --user is-active --quiet tokenwell.service; then
+  was_active=1; systemctl --user stop tokenwell.service
 fi
 # Retry loop: even with the daemon stopped, a straggling secret-tool (an orphan
 # of the daemon's polling) can D-Bus-activate a competing gnome-keyring in the
@@ -123,7 +127,7 @@ for attempt in 1 2 3; do
   sleep 1
   # Password travels stdin -> stdin. Never argv, never a file, never echoed.
   # systemd-run --scope puts the daemonized keyring in its own cgroup, so it
-  # survives `systemctl stop claude-unlimited` when this runs as ExecStartPre.
+  # survives `systemctl stop tokenwell` when this runs as ExecStartPre.
   printf '%s\n' "$pw" \
     | systemd-run --user --scope --quiet --unit="gnome-keyring-cu-$(date +%s%N)" \
         gnome-keyring-daemon --unlock --components=secrets --daemonize >/dev/null 2>&1
@@ -137,7 +141,7 @@ rc=0
 if [ "$ok" = 1 ]; then echo "login keyring unlocked"
 else echo "FAILED: login keyring still locked after 3 attempts" >&2; rc=1; fi
 
-[ "$was_active" = 1 ] && systemctl --user start --no-block claude-unlimited.service
+[ "$was_active" = 1 ] && systemctl --user start --no-block tokenwell.service
 exit $rc
 ```
 
@@ -175,24 +179,24 @@ A few details worth understanding, not just copying:
   one keyring daemon, and re-rolls the window up to three times otherwise. Reproduced.
 - **`systemd-run --scope`** around the keyring launch keeps the daemonized
   `gnome-keyring-daemon` out of the daemon unit's cgroup. Without it, when the script
-  runs as `ExecStartPre` the keyring lands in `claude-unlimited.service`'s cgroup, and
-  `systemctl stop claude-unlimited` takes the keyring down with it.
+  runs as `ExecStartPre` the keyring lands in `tokenwell.service`'s cgroup, and
+  `systemctl stop tokenwell` takes the keyring down with it.
 
 ### 2. The unlock unit
 
-Save as `~/.config/systemd/user/claude-unlimited-keyring-unlock.service`:
+Save as `~/.config/systemd/user/tokenwell-keyring-unlock.service`:
 
 ```ini
 [Unit]
-Description=Unlock the GNOME login keyring (claude-unlimited reads its tokens from it)
-Before=claude-unlimited.service
+Description=Unlock the GNOME login keyring (tokenwell reads its tokens from it)
+Before=tokenwell.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 # The daemonized gnome-keyring lands in this cgroup; never kill it on unit stop.
 KillMode=process
-ExecStart=%h/.local/bin/claude-unlimited-keyring-unlock
+ExecStart=%h/.local/bin/tokenwell-keyring-unlock
 
 [Install]
 WantedBy=default.target
@@ -206,15 +210,15 @@ process keep running independently.
 
 ### 3. The drop-in on the daemon's own unit
 
-Save as `~/.config/systemd/user/claude-unlimited.service.d/keyring.conf`:
+Save as `~/.config/systemd/user/tokenwell.service.d/keyring.conf`:
 
 ```ini
-# Drop-in: survives `claude-unlimited install`/updates regenerating the main
+# Drop-in: survives `tokenwell install`/updates regenerating the main
 # unit file. Start only after the login keyring is unlocked, or every request
 # 429s with a misleading "exhausted" message.
 [Unit]
-After=claude-unlimited-keyring-unlock.service
-Wants=claude-unlimited-keyring-unlock.service
+After=tokenwell-keyring-unlock.service
+Wants=tokenwell-keyring-unlock.service
 
 # Re-check on EVERY daemon start, not just at login. Wants= does not re-run a
 # RemainAfterExit unit that is already active, so without this a keyring that
@@ -225,13 +229,13 @@ Wants=claude-unlimited-keyring-unlock.service
 # (and 429s, as before) instead of crash-looping. Without the "-", the daemon
 # unit's Restart=on-failure + StartLimitIntervalSec=0 would re-run this every 2s
 # forever on a wrong password.
-ExecStartPre=-%h/.local/bin/claude-unlimited-keyring-unlock
+ExecStartPre=-%h/.local/bin/tokenwell-keyring-unlock
 ```
 
 A **drop-in** (a `.d/` directory next to the unit's own filename, holding one or more
 `.conf` files) is systemd's mechanism for adding directives to a unit without editing
 the unit file itself. It survives the installer/updater regenerating
-`claude-unlimited.service` wholesale, because the drop-in lives in its own file and is
+`tokenwell.service` wholesale, because the drop-in lives in its own file and is
 merged in at load time regardless of what the main unit file says.
 
 ### 4. First run — this creates the keyring
@@ -240,12 +244,12 @@ On a fresh distro there is no `login` keyring yet and no password. Create the fi
 default `PASSWORD_CMD` reads from before the first run:
 
 ```bash
-mkdir -p ~/.config/claude-unlimited
-(umask 077; head -c 32 /dev/urandom | base64 | tr -d '\n' > ~/.config/claude-unlimited/keyring-password)
+mkdir -p ~/.config/tokenwell
+(umask 077; head -c 32 /dev/urandom | base64 | tr -d '\n' > ~/.config/tokenwell/keyring-password)
 ```
 
 That file is the keyring's password from now on — keep it with the same care as
-`~/.claude`. It's deliberately outside `~/.claude-unlimited/`, which `purge` deletes, so
+`~/.claude`. It's deliberately outside `~/.tokenwell/`, which `purge` deletes, so
 a purge-and-reinstall doesn't orphan the keyring. If it's ever lost, the keyring can't be
 unlocked: delete `~/.local/share/keyrings/login.keyring` and re-add every account.
 
@@ -261,28 +265,28 @@ keyring with the supplied password when none exists, so the first run bootstraps
 every later run just unlocks it.
 
 ```bash
-chmod 700 ~/.local/bin/claude-unlimited-keyring-unlock
-~/.local/bin/claude-unlimited-keyring-unlock        # prints "login keyring unlocked"
+chmod 700 ~/.local/bin/tokenwell-keyring-unlock
+~/.local/bin/tokenwell-keyring-unlock        # prints "login keyring unlocked"
 ```
 
 Then enable the unlock unit:
 
 ```bash
-systemctl --user enable --now claude-unlimited-keyring-unlock.service
+systemctl --user enable --now tokenwell-keyring-unlock.service
 ```
 
 ### Order of operations, end to end
 
 1. `systemd=true` in `/etc/wsl.conf`, restart the distro.
 2. Install the tool (`./install.sh` from your checkout). This is what creates
-   `claude-unlimited.service`; the drop-in below has nothing to attach to before this.
+   `tokenwell.service`; the drop-in below has nothing to attach to before this.
 3. Save the script, the unit, and the drop-in (sections 1–3).
-4. Create the password file (section 4) — `mkdir -p ~/.config/claude-unlimited` and
-   write a random password to `~/.config/claude-unlimited/keyring-password`.
+4. Create the password file (section 4) — `mkdir -p ~/.config/tokenwell` and
+   write a random password to `~/.config/tokenwell/keyring-password`.
 5. `daemon-reload`, then run the script once by hand (section 4) — creates and unlocks
    the keyring.
 6. `enable --now` the unlock unit, then verify (next section).
-7. `claude-unlimited add-account`. On WSL the browser will not open by itself — paste
+7. `tokenwell add-account`. On WSL the browser will not open by itself — paste
    the URL it prints into a Windows browser and paste the code back.
 
 Doing `add-account` before step 5 is what produces the "choose a password for a new
@@ -300,7 +304,7 @@ busctl --user call org.freedesktop.secrets /org/freedesktop/secrets \
   org.freedesktop.Secret.Service Lock ao 1 /org/freedesktop/secrets/collection/login
 
 # Restart the daemon. Its ExecStartPre= runs the unlock script first.
-systemctl --user restart claude-unlimited.service
+systemctl --user restart tokenwell.service
 
 # Confirm it actually unlocked
 busctl --user call org.freedesktop.secrets /org/freedesktop/secrets/collection/login \
@@ -309,9 +313,9 @@ busctl --user call org.freedesktop.secrets /org/freedesktop/secrets/collection/l
 
 The last command should print `v b false`. If you skipped the `ExecStartPre=` line in
 the drop-in, restarting the daemon will **not** unlock anything (see the `Wants=` note
-above) — run `systemctl --user restart claude-unlimited-keyring-unlock.service` instead.
+above) — run `systemctl --user restart tokenwell-keyring-unlock.service` instead.
 Also confirm the keyring survives the daemon stopping: `systemctl --user stop
-claude-unlimited.service`, then the `Locked` query again — still `false`, and
+tokenwell.service`, then the `Locked` query again — still `false`, and
 `pgrep -af keyring-d` still shows one daemon. This proves the units fire correctly against a
 simulated lock — it does **not** prove behavior across a real reboot, since a reboot
 also re-creates the D-Bus session and `XDG_RUNTIME_DIR` from scratch. Treat "verified
@@ -325,7 +329,7 @@ If the keyring was reset, its password was lost, or it's otherwise unrecoverable
 1. **Preserve the old keyring file — rename it, don't delete it**, e.g.
    `mv ~/.local/share/keyrings/login.keyring ~/.local/share/keyrings/login.keyring.locked-$(date +%F)`.
    You may want to come back to it, and a rename costs nothing.
-2. **Stop the daemon first** (`systemctl --user stop claude-unlimited.service`) —
+2. **Stop the daemon first** (`systemctl --user stop tokenwell.service`) —
    same reasoning as above: touching the keyring while the daemon is polling it risks
    a competing locked instance winning the bus name.
 3. Let a fresh, empty keyring collection be created (it will be, the next time
@@ -333,8 +337,8 @@ If the keyring was reset, its password was lost, or it's otherwise unrecoverable
    distribution's keyring tooling.
 4. Verify it's unlocked (`Locked` = `false` via the `busctl` call above) before
    restarting the daemon.
-5. **Re-add every account** with `claude-unlimited add-account` /
-   `claude-unlimited add-codex-account` — this means a real browser login for each
+5. **Re-add every account** with `tokenwell add-account` /
+   `tokenwell add-codex-account` — this means a real browser login for each
    one, since the tokens that lived in the old keyring are gone. On WSL, remember the
    browser won't open for you (see above) — copy the printed URL into a Windows
    browser by hand and paste the code back.
@@ -348,7 +352,7 @@ Two things *won't* rescue you here, and it's worth knowing why before you try th
   token only into the keyring — never back into that file. So that file is a one-shot
   recovery at best: it works only if the account has never refreshed since it was
   added, and goes stale the moment it has.
-- **`claude-unlimited reauth` will not help until the profile is marked
+- **`tokenwell reauth` will not help until the profile is marked
   `auth_invalid`.** As covered above, a missing/locked credential currently surfaces
   as an ordinary cooldown, not as `auth_invalid` — so `reauth` has nothing to act on
   and will (truthfully, unhelpfully) report that nothing needs re-authentication.

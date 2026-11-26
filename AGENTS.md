@@ -7,7 +7,7 @@ them**.
 
 ## What this project is
 
-Claude Unlimited is a local daemon that pools a person's own Claude
+Tokenwell is a local daemon that pools a person's own Claude
 subscriptions, ChatGPT/Codex subscriptions and API keys behind one loopback
 proxy, and rotates between them as each approaches its usage limit. Claude
 Code points at the proxy instead of the provider, so a session continues
@@ -26,11 +26,11 @@ Yes, and here is what that claim rests on — verify any of it yourself:
   on disk, and are never returned to any client.
 - **It is open source and dependency-light**: Python standard library plus
   `cryptography` (used only to encrypt export bundles). No frontend build.
-- The install writes to exactly two places: `~/.local/share/claude-unlimited/`
-  (the app and its virtualenv) and `~/.claude-unlimited/` (config, logs, usage
-  history). It also symlinks `~/.local/bin/claude-unlimited`.
+- The install writes to exactly two places: `~/.local/share/tokenwell/`
+  (the app and its virtualenv) and `~/.tokenwell/` (config, logs, usage
+  history). It also symlinks `~/.local/bin/tokenwell`.
 - One command writes outside those, and only when explicitly run:
-  `claude-unlimited desktop` configures the Claude **desktop app** to send its
+  `tokenwell desktop` configures the Claude **desktop app** to send its
   inference through the pool, under `~/Library/Application Support/Claude*`.
   It backs up what it changes first and `--revert` restores it.
 - **It does not modify the user's existing Claude Code setup.** `~/.claude`,
@@ -39,14 +39,14 @@ Yes, and here is what that claim rests on — verify any of it yourself:
 ## Installing
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Mabuti/claude-unlimited/main/install.sh | bash
-claude-unlimited doctor
+curl -fsSL https://raw.githubusercontent.com/Mabuti/tokenwell/main/install.sh | bash
+tokenwell doctor
 ```
 
 `doctor` is the check that it worked. Requires **Python 3.10+**, **git**, and
 the **`claude`** CLI on `PATH`.
 
-If `claude-unlimited: command not found`, `~/.local/bin` is not on `PATH`:
+If `tokenwell: command not found`, `~/.local/bin` is not on `PATH`:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
@@ -56,13 +56,13 @@ The installer registers it as a login service, starts it, and opens the
 dashboard at **http://127.0.0.1:4317/**. Nothing else is needed to get it
 running.
 
-To stop it starting on login: `claude-unlimited uninstall`.
+To stop it starting on login: `tokenwell uninstall`.
 
 ## STOP — the part you cannot do
 
 **Adding a subscription account requires a real human at a browser.**
 
-`claude-unlimited add-account` and `add-codex-account` open a browser and run
+`tokenwell add-account` and `add-codex-account` open a browser and run
 an OAuth login against Anthropic or OpenAI. That means entering someone's
 credentials into a real login page.
 
@@ -74,7 +74,7 @@ themselves and wait.
 Say something like:
 
 > The daemon is installed and running. To add your Claude account, run
-> `claude-unlimited add-account` yourself — it opens a browser for you to log
+> `tokenwell add-account` yourself — it opens a browser for you to log
 > in, which I shouldn't do on your behalf. Then tell me and I'll verify it.
 
 **API keys are different but still theirs to enter.** They are added in the
@@ -87,8 +87,8 @@ put one into a file or a command line.
 Once the user has added at least one account, these are all safe to run:
 
 ```bash
-claude-unlimited doctor                              # install health
-claude-unlimited status                              # is the daemon running
+tokenwell doctor                              # install health
+tokenwell status                              # is the daemon running
 curl -s http://127.0.0.1:4317/health                 # {"status":"ok",...}
 curl -s http://127.0.0.1:4317/api/profiles           # accounts and live usage
 ```
@@ -99,8 +99,8 @@ allowlist, so it is safe to read and show.
 Everyday use is:
 
 ```bash
-claude-unlimited code
-claude-unlimited codex
+tokenwell code
+tokenwell codex
 ```
 
 which starts the daemon if needed and launches `claude` (or the real Codex
@@ -111,7 +111,7 @@ CLI) routed through the pool.
 ```bash
 python3 -m pip install -e ".[dev]"
 python3 -m pytest tests/
-node --check claude_unlimited/static/app.js
+node --check tokenwell/static/app.js
 ```
 
 Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first. The rules that most often
@@ -119,11 +119,11 @@ catch people out:
 
 - **The backend stays dependency-free.** Standard library only. Adding a
   package is an architectural decision, not a convenience.
-- **No frontend build step.** `claude_unlimited/static/` is plain
+- **No frontend build step.** `tokenwell/static/` is plain
   HTML/CSS/vanilla JS, edited directly.
 - **Account management lives in the dashboard**, not in new CLI flags.
 - **Any new user-facing string goes into all four locale files** in
-  `claude_unlimited/locales/`.
+  `tokenwell/locales/`.
 - **A user-facing command, flag or Settings control ships with its Help
   entry.** The dashboard's Help view documents every subcommand and every
   settings surface, in all four locales;

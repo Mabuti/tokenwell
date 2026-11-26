@@ -21,5 +21,5 @@
 - [ ] No frontend build step introduced
 - [ ] OS-specific code stays behind the existing pluggable interfaces
 - [ ] Profile management stays in the Dashboard rather than new CLI flags
-- [ ] Any new user-facing string is added to **all** locale files in `claude_unlimited/locales/`
+- [ ] Any new user-facing string is added to **all** locale files in `tokenwell/locales/`
 - [ ] No credentials, tokens, or personal data in code, tests, comments, or screenshots

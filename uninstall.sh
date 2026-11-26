@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# `claude-unlimited purge` is the thorough path: it also removes each Profile's
+# `tokenwell purge` is the thorough path: it also removes each Profile's
 # credential from the OS keystore, which needs the config that names those
 # Profiles to still exist. This script only handles the case where the CLI is
 # already gone or broken.
@@ -10,12 +10,14 @@ set -euo pipefail
 # PATH (a fresh account), and a PATH-only lookup would skip the purge and leave
 # the stored credentials behind. The install's own venv copy goes first, then
 # the symlink in ~/.local/bin, then whatever is on PATH.
-INSTALL_ROOT="$HOME/.local/share/claude-unlimited"
+INSTALL_ROOT="$HOME/.local/share/tokenwell"
+LEGACY_INSTALL_ROOT="$HOME/.local/share/claude-unlimited"
 LAUNCHER=""
 for candidate in \
-  "$INSTALL_ROOT/venv/bin/claude-unlimited" \
-  "$HOME/.local/bin/claude-unlimited" \
-  "$(command -v claude-unlimited 2>/dev/null || true)"; do
+  "$INSTALL_ROOT/venv/bin/tokenwell" \
+  "$LEGACY_INSTALL_ROOT/venv/bin/tokenwell" \
+  "$HOME/.local/bin/tokenwell" \
+  "$(command -v tokenwell 2>/dev/null || true)"; do
   if [ -n "$candidate" ] && [ -f "$candidate" ] && [ -x "$candidate" ]; then
     LAUNCHER="$candidate"
     break
@@ -33,10 +35,10 @@ if [ -n "$LAUNCHER" ]; then
   esac
 fi
 
-echo "The claude-unlimited command isn't available — removing files directly."
+echo "The tokenwell command isn't available — removing files directly."
 echo "NOTE: stored credentials cannot be removed this way, because the config"
 echo "that names them is about to go. Remove entries with the service prefix"
-echo "'claude-unlimited.oauth.' from your OS keystore by hand if you want them gone."
+echo "'tokenwell.oauth.' from your OS keystore by hand if you want them gone."
 echo
 
 # Tear down the background service first, so its files aren't orphaned. Without
@@ -46,18 +48,23 @@ echo
 case "$(uname -s)" in
   Linux)
     if command -v systemctl >/dev/null 2>&1; then
+      systemctl --user disable --now tokenwell.service 2>/dev/null || true
       systemctl --user disable --now claude-unlimited.service 2>/dev/null || true
+      rm -f "$HOME/.config/systemd/user/tokenwell.service"
       rm -f "$HOME/.config/systemd/user/claude-unlimited.service"
       systemctl --user daemon-reload 2>/dev/null || true
     fi
     command -v loginctl >/dev/null 2>&1 && loginctl disable-linger "$(id -un)" 2>/dev/null || true
     ;;
   Darwin)
-    PLIST="$HOME/Library/LaunchAgents/com.claude-unlimited.daemon.plist"
+    PLIST="$HOME/Library/LaunchAgents/com.tokenwell.daemon.plist"
     if [ -f "$PLIST" ]; then
-      launchctl bootout "gui/$(id -u)/com.claude-unlimited.daemon" 2>/dev/null || true
+      launchctl bootout "gui/$(id -u)/com.tokenwell.daemon" 2>/dev/null || true
       rm -f "$PLIST"
     fi
+    LEGACY_PLIST="$HOME/Library/LaunchAgents/com.claude-unlimited.daemon.plist"
+    launchctl bootout "gui/$(id -u)/com.claude-unlimited.daemon" 2>/dev/null || true
+    rm -f "$LEGACY_PLIST"
     # The HUD is a separate app with its own login item. Left behind, it keeps
     # starting on every login and polling a daemon that is no longer there.
     HUD_PLIST="$HOME/Library/LaunchAgents/ai.devdock.claude-unlimited.hud.plist"
@@ -70,8 +77,8 @@ case "$(uname -s)" in
     ;;
 esac
 
-# Both command names ship — removing only `claude-unlimited` left `cu` behind
+# Both command names ship — removing only `tokenwell` left `cu` behind
 # as a dangling symlink.
-rm -f "$HOME/.local/bin/claude-unlimited" "$HOME/.local/bin/cu"
-rm -rf "$HOME/.local/share/claude-unlimited" "$HOME/.claude-unlimited"
+rm -f "$HOME/.local/bin/tokenwell" "$HOME/.local/bin/tw" "$HOME/.local/bin/cu" "$HOME/.local/bin/claude-unlimited"
+rm -rf "$HOME/.local/share/tokenwell" "$HOME/.local/share/claude-unlimited" "$HOME/.tokenwell" "$HOME/.claude-unlimited"
 echo "Removed. ~/.claude was left untouched."

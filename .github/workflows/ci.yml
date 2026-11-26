@@ -54,4 +54,4 @@ jobs:
       # Only needs to run once; node is preinstalled on both runner images.
       - name: Check JS syntax
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        run: node --check claude_unlimited/static/app.js
+        run: node --check tokenwell/static/app.js

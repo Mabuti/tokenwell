@@ -31,7 +31,7 @@ jobs:
       - name: Tag must match the package version
         run: |
           TAG="${GITHUB_REF_NAME#v}"
-          PKG="$(python -c 'import claude_unlimited; print(claude_unlimited.__version__)')"
+          PKG="$(python -c 'import tokenwell; print(tokenwell.__version__)')"
           echo "tag=$TAG package=$PKG"
           if [ "$TAG" != "$PKG" ]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match __version__ ($PKG). Bump one or the other."
@@ -42,7 +42,7 @@ jobs:
         run: python -m pytest tests/ -q
 
       - name: Check JS syntax
-        run: node --check claude_unlimited/static/app.js
+        run: node --check tokenwell/static/app.js
 
   release:
     needs: verify
@@ -75,7 +75,7 @@ jobs:
             echo "Install or update:"
             echo
             echo '```bash'
-            echo 'curl -fsSL https://raw.githubusercontent.com/Mabuti/claude-unlimited/main/install.sh | bash'
+            echo 'curl -fsSL https://raw.githubusercontent.com/Mabuti/tokenwell/main/install.sh | bash'
             echo '```'
           } > release-notes.md
 

@@ -1,6 +1,6 @@
 # Contributing
 
-Standards for working on Claude Unlimited, so features added later — including non-macOS support — land the same way every time instead of each depending on tribal knowledge.
+Standards for working on Tokenwell, so features added later — including non-macOS support — land the same way every time instead of each depending on tribal knowledge.
 
 Run the suite with `python -m pip install -e ".[dev]"` then `python -m pytest tests/`. The `dev` extra adds `pytest` and nothing else.
 
@@ -10,7 +10,7 @@ Changing the macOS HUD (`macos-widget/`)? Its tests are separate: `cd macos-widg
 
 - **Backend stays dependency-free, with one recorded exception.** Python standard library only — no `pip install` required to run the daemon, except `cryptography`, used exclusively by `export_import.py` for authenticated encryption of credential-containing Export bundles. If a feature seems to need a package, look for a stdlib way first; if there truly isn't one, that's a decision for a new ADR, not a quiet addition to `pyproject.toml`.
 - **Frontend stays dependency-free too**, in the same sense: no `npm install`, no build step. A static asset (an icon font, a small chart library) may be vendored as a committed file and referenced locally — never fetched from a CDN at runtime.
-- **OS-specific *backends* live behind their interface, always.** This rule is about the three things this daemon implements per-OS for itself: secret storage (`claude_unlimited/secret_store/`), daemon install/auto-start (`claude_unlimited/daemon_installer/`) and desktop notifications (`claude_unlimited/notifications.py`) — each one implementation per OS behind a single small interface (see `docs/adr/0005-*.md`). Never add a second way to store a credential, install the daemon, or raise a notification outside those files, and never branch on `platform.system()` to pick between them outside the two `__init__.py` dispatch points and the one POSIX-only-stdlib guard in `daemon.py` (`resource`, not available on Windows).
+- **OS-specific *backends* live behind their interface, always.** This rule is about the three things this daemon implements per-OS for itself: secret storage (`tokenwell/secret_store/`), daemon install/auto-start (`tokenwell/daemon_installer/`) and desktop notifications (`tokenwell/notifications.py`) — each one implementation per OS behind a single small interface (see `docs/adr/0005-*.md`). Never add a second way to store a credential, install the daemon, or raise a notification outside those files, and never branch on `platform.system()` to pick between them outside the two `__init__.py` dispatch points and the one POSIX-only-stdlib guard in `daemon.py` (`resource`, not available on Windows).
 
   Three things are deliberately NOT covered by it, because they are not this daemon's own backends:
 
@@ -40,9 +40,9 @@ Most changes don't qualify. A short paragraph is enough: context, decision, why.
 
 Three backends exist today behind each interface (see `docs/adr/0002-*.md` for why they're pluggable, `docs/adr/0005-*.md` for how the second and third arrived):
 
-- **Secret storage** (`claude_unlimited/secret_store/`) — macOS Keychain (`security` CLI, verified on real hardware), Linux Secret Service (`secret-tool`, unverified), Windows DPAPI (`ctypes` + `crypt32.dll`, unverified).
-- **Daemon install/auto-start** (`claude_unlimited/daemon_installer/`) — macOS `launchd` (verified), Linux `systemd --user` (unverified), Windows Task Scheduler (`schtasks`, unverified).
-- **Desktop notifications** (`claude_unlimited/notifications.py`) — macOS `osascript` (verified), Linux `notify-send` (unverified), Windows PowerShell toast (unverified).
+- **Secret storage** (`tokenwell/secret_store/`) — macOS Keychain (`security` CLI, verified on real hardware), Linux Secret Service (`secret-tool`, unverified), Windows DPAPI (`ctypes` + `crypt32.dll`, unverified).
+- **Daemon install/auto-start** (`tokenwell/daemon_installer/`) — macOS `launchd` (verified), Linux `systemd --user` (unverified), Windows Task Scheduler (`schtasks`, unverified).
+- **Desktop notifications** (`tokenwell/notifications.py`) — macOS `osascript` (verified), Linux `notify-send` (unverified), Windows PowerShell toast (unverified).
 
 "Unverified" means: real, reviewed, individually unit-tested code (mocking the subprocess/ctypes calls) that has never run against a real Secret Service provider, `systemd --user` session, DPAPI call, or Task Scheduler task — there's no Linux or Windows machine in this project's development environment. **If you're the first person running this on Linux or Windows: that's the real smoke test.**
 
@@ -51,13 +51,13 @@ Three backends exist today behind each interface (see `docs/adr/0002-*.md` for w
 Do these in order; each line is something a static review can't confirm. Report (or fix) anything that doesn't match.
 
 **Both platforms**
-1. `claude-unlimited doctor` — secret store names *this* platform's backend (not "macOS Keychain"), notifications line is right, no traceback.
-2. `claude-unlimited add-account` — the browser opens (this is the env/`.cmd`-shim path); the account appears in the dashboard afterwards.
+1. `tokenwell doctor` — secret store names *this* platform's backend (not "macOS Keychain"), notifications line is right, no traceback.
+2. `tokenwell add-account` — the browser opens (this is the env/`.cmd`-shim path); the account appears in the dashboard afterwards.
 3. Add an API key in the dashboard, then **remove** it — its credential is gone from the OS store (not just the config row).
-4. `claude-unlimited code` — a real `claude` session starts and routes through the pool (check the Activity log); on Windows the shell doesn't fight the TUI for the console.
+4. `tokenwell code` — a real `claude` session starts and routes through the pool (check the Activity log); on Windows the shell doesn't fight the TUI for the console.
 5. Dashboard → **Send test notification** — an actual toast/notification appears (not just a "sent" toast).
 6. Settings → **Restart** the daemon, and let an update install if one's available — the daemon comes back (this is the self-restart path).
-7. `claude-unlimited uninstall` — the service/unit/task is gone and doesn't error on next login.
+7. `tokenwell uninstall` — the service/unit/task is gone and doesn't error on next login.
 
 **Linux specifically**
 8. After `install`, log out and back in — the daemon is still running (`loginctl show-user $USER --property=Linger` should say `Linger=yes`).
@@ -65,13 +65,13 @@ Do these in order; each line is something a static review can't confirm. Report 
 10. Re-run `install --port <new>` — the daemon actually moves to the new port.
 
 **Windows specifically**
-11. `pip install`, then `claude-unlimited install` from an **elevated** prompt — the logon task is created; confirm it runs unelevated (`/rl limited`).
-12. Close the terminal you ran `claude-unlimited code` from — the background daemon keeps running (detached), and Ctrl-C in that terminal didn't kill it.
+11. `pip install`, then `tokenwell install` from an **elevated** prompt — the logon task is created; confirm it runs unelevated (`/rl limited`).
+12. Close the terminal you ran `tokenwell code` from — the background daemon keeps running (detached), and Ctrl-C in that terminal didn't kill it.
 13. Whichever `claude` you have (native `.exe` or npm `.cmd`) — `code` and `add-account` both launch it.
 
 ## Before you push: the GPT window table
 
-`claude_unlimited/gpt_windows.py` hardcodes the context windows of the GPT
+`tokenwell/gpt_windows.py` hardcodes the context windows of the GPT
 models a ChatGPT/Codex Profile can be served by (docs/adr/0009). They are a
 fact about the provider, not something the daemon learns at runtime, so they
 must be re-verified before every push:
@@ -90,13 +90,13 @@ subscription is charged at a higher usage rate.
 
 ## Translations
 
-Every user-facing string lives in `claude_unlimited/locales/*.json` as a flat `key -> string` map. If you add or rename a key, add it to **all** locale files in the same change. A missing key falls back to English, so a partial translation still renders — but a key that exists in only one file is a bug waiting to surface.
+Every user-facing string lives in `tokenwell/locales/*.json` as a flat `key -> string` map. If you add or rename a key, add it to **all** locale files in the same change. A missing key falls back to English, so a partial translation still renders — but a key that exists in only one file is a bug waiting to surface.
 
 Adding a whole new language is one file: copy `en.json` to `<code>.json` and translate it. No registration step — the available set is derived from the files present.
 
 ## The Help view
 
-A user-facing command, flag, or Settings control ships with its Help entry. The dashboard's Help view (`data-view-panel="help"` in `claude_unlimited/static/index.html`, strings under `help.*` in every locale) documents every subcommand and every Settings section, and `tests/test_help_view_covers_the_cli.py` fails when it falls behind. What the test enforces: every subcommand in `cli.py`'s argparse tree has a Help row and every row is a real subcommand; every Settings section is named in the Help text or listed in the test's exemption constant with a reason; and each string's locale value matches its inline English fallback in `index.html`. Flags are covered by prose in the command's row, which the test does not check — that part is on you. Internal changes — a routing fix, a refactor — need nothing.
+A user-facing command, flag, or Settings control ships with its Help entry. The dashboard's Help view (`data-view-panel="help"` in `tokenwell/static/index.html`, strings under `help.*` in every locale) documents every subcommand and every Settings section, and `tests/test_help_view_covers_the_cli.py` fails when it falls behind. What the test enforces: every subcommand in `cli.py`'s argparse tree has a Help row and every row is a real subcommand; every Settings section is named in the Help text or listed in the test's exemption constant with a reason; and each string's locale value matches its inline English fallback in `index.html`. Flags are covered by prose in the command's row, which the test does not check — that part is on you. Internal changes — a routing fix, a refactor — need nothing.
 
 ## Commit messages
 

@@ -102,7 +102,7 @@ its backend cannot hold.** Concretely:
 * **Gateway**, when nothing that may take the request can hold it: **HTTP 400
   in Anthropic's exact envelope**, `invalid_request_error`,
   `prompt is too long: N tokens > M maximum` with the real estimate and the
-  largest budget among the accounts considered, **no `[claude-unlimited]`
+  largest budget among the accounts considered, **no `[tokenwell]`
   prefix**, no `retry-after`. Never a 503; the existing capacity-exhaustion
   503 is unchanged and still wins when the pool is genuinely out.
 * **Explicit choices are honoured, never substituted** — `--profile <codex>`

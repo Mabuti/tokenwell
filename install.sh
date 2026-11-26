@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL="${CLAUDE_UNLIMITED_REPO:-https://github.com/Mabuti/claude-unlimited.git}"
-REPO_BRANCH="${CLAUDE_UNLIMITED_BRANCH:-main}"
-INSTALL_ROOT="$HOME/.local/share/claude-unlimited"
+REPO_URL="${TOKENWELL_REPO:-${CLAUDE_UNLIMITED_REPO:-https://github.com/Mabuti/tokenwell.git}}"
+REPO_BRANCH="${TOKENWELL_BRANCH:-${CLAUDE_UNLIMITED_BRANCH:-main}}"
+INSTALL_ROOT="$HOME/.local/share/tokenwell"
+LEGACY_INSTALL_ROOT="$HOME/.local/share/claude-unlimited"
 BIN_DIR="$HOME/.local/bin"
 PATH_NOTE=""
 
@@ -20,7 +21,7 @@ fi
 cleanup() { [ -n "$CLONED" ] && rm -rf "$CLONED" || true; }
 trap cleanup EXIT
 
-echo "Claude Unlimited installer"
+echo "Tokenwell installer"
 echo "=========================="
 
 missing=""
@@ -52,7 +53,7 @@ fi
 command -v curl >/dev/null 2>&1 || echo "NOTE: curl not found — skipping the post-install dashboard health check."
 
 if [ -n "$CLONED" ]; then
-  echo "Downloading Claude Unlimited…"
+  echo "Downloading Tokenwell…"
   git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$SOURCE_DIR" --quiet
 fi
 
@@ -75,12 +76,13 @@ PIP="$INSTALL_ROOT/venv/bin/pip"
 # Symlink the venv's own console_scripts (pyproject's [project.scripts]) so the
 # commands on PATH always match what was installed, with dependencies resolved,
 # instead of a wrapper hoping the system python3 has cryptography. Both names
-# ship — `claude-unlimited` and the short alias `cu` — so link both.
-ln -sf "$INSTALL_ROOT/venv/bin/claude-unlimited" "$BIN_DIR/claude-unlimited"
-ln -sf "$INSTALL_ROOT/venv/bin/cu" "$BIN_DIR/cu"
+# ship — all four names point at the same entry point.
+for name in tokenwell tw cu claude-unlimited; do
+  ln -sf "$INSTALL_ROOT/venv/bin/$name" "$BIN_DIR/$name"
+done
 
 echo
-echo "Installed: $BIN_DIR/claude-unlimited (also as: cu)"
+echo "Installed: $BIN_DIR/tokenwell (also as: tw, cu, claude-unlimited)"
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
   *)
@@ -91,7 +93,7 @@ case ":$PATH:" in
     ;;
 esac
 
-CLI="$BIN_DIR/claude-unlimited"
+CLI="$BIN_DIR/tokenwell"
 
 echo
 echo "Checking the install…"
@@ -103,24 +105,24 @@ echo
 if ! PATH="$BIN_DIR:$PATH" "$CLI" doctor; then
   echo
   echo "Install finished, but the check above found something. Fix it, then run:"
-  echo "  claude-unlimited doctor"
+  echo "  tokenwell doctor"
   exit 1
 fi
 
 # The dashboard is where accounts are actually added, so it is worth being one
 # click away rather than a command the reader has to find. Started detached:
-# this makes it usable right now, while `claude-unlimited install` is what
+# this makes it usable right now, while `tokenwell install` is what
 # makes it come back on login.
 # Resolve the port the same way the CLI does — explicit env var, then the port
 # saved in Settings, then the default — using the package just installed. A
-# bare "${CLAUDE_UNLIMITED_PORT:-4317}" here silently moved a saved port back
+# bare "${TOKENWELL_PORT:-4317}" here silently moved a saved port back
 # to 4317 on every re-run, since an explicit --port outranks the setting.
-PORT="$("$INSTALL_ROOT/venv/bin/python" -c 'from claude_unlimited.config import resolve_port; print(resolve_port(None))' 2>/dev/null || echo "${CLAUDE_UNLIMITED_PORT:-4317}")"
+PORT="$("$INSTALL_ROOT/venv/bin/python" -c 'from tokenwell.config import resolve_port; print(resolve_port(None))' 2>/dev/null || echo "${TOKENWELL_PORT:-${CLAUDE_UNLIMITED_PORT:-4317}}")"
 # Digits only. It reaches a URL and a command line, and every expansion here is
 # quoted, but validating the shape is cheaper than reasoning about whether
 # every future use stays quoted.
 case "$PORT" in
-  ''|*[!0-9]*) echo "CLAUDE_UNLIMITED_PORT must be a number, got: $PORT" >&2; exit 1 ;;
+  ''|*[!0-9]*) echo "TOKENWELL_PORT must be a number, got: $PORT" >&2; exit 1 ;;
 esac
 URL="http://127.0.0.1:${PORT}/"
 
@@ -165,18 +167,18 @@ if curl -fsS --max-time 2 "${URL}health" >/dev/null 2>&1; then
   esac
 else
   echo "The daemon did not come up. Start it yourself with:"
-  echo "  claude-unlimited start"
+  echo "  tokenwell start"
 fi
 
 echo
 echo "Next steps:"
 echo "  Add an API key from the dashboard, or add a subscription:"
-echo "    claude-unlimited add-account         # a Claude subscription"
-echo "    claude-unlimited add-codex-account   # a ChatGPT/Codex subscription"
-echo "  claude-unlimited uninstall             # stop it starting on login"
+echo "    tokenwell add-account         # a Claude subscription"
+echo "    tokenwell add-codex-account   # a ChatGPT/Codex subscription"
+echo "  tokenwell uninstall             # stop it starting on login"
 echo
 echo "To remove everything later:"
-echo "  claude-unlimited purge"
+echo "  tokenwell purge"
 if [ -n "$PATH_NOTE" ]; then
   echo
   echo "Before using the commands above, add $BIN_DIR to your PATH:"

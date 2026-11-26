@@ -8,7 +8,7 @@ body:
         Thanks for taking the time to report this.
 
         **Please never paste credentials.** No API keys, no OAuth tokens, no
-        `~/.claude-unlimited/config.json` contents, no screenshots showing a
+        `~/.tokenwell/config.json` contents, no screenshots showing a
         real token. Redact anything that looks like a secret.
 
   - type: textarea
@@ -33,7 +33,7 @@ body:
   - type: textarea
     id: doctor
     attributes:
-      label: Output of `claude-unlimited doctor`
+      label: Output of `tokenwell doctor`
       description: This is redaction-safe — it never prints credentials.
       render: text
     validations:
@@ -55,7 +55,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: From `claude-unlimited doctor`, or the commit you are on.
+      description: From `tokenwell doctor`, or the commit you are on.
     validations:
       required: true
 
@@ -76,7 +76,7 @@ body:
     id: logs
     attributes:
       label: Relevant log output
-      description: From `~/.claude-unlimited/logs/`. Redact anything sensitive.
+      description: From `~/.tokenwell/logs/`. Redact anything sensitive.
       render: shell
     validations:
       required: false

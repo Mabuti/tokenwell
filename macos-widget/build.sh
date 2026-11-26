@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 # The version this build is stamped with, read from the one place that
 # defines it. The release asset's name and the checksum the installer verifies
 # are both built from it, so a mismatch here would be an unfindable bug.
-VERSION="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' ../claude_unlimited/__init__.py)"
+VERSION="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' ../tokenwell/__init__.py)"
 [ -n "$VERSION" ] || { echo "could not read __version__" >&2; exit 2; }
 
 # --release: build a distributable zip and the checksum that authorises it,
@@ -47,7 +47,10 @@ esac
 # A checkout without them builds a HUD in which every effect falls back to the
 # plain SwiftUI it replaced — a supported build, which is why this is a skip and
 # not an error. `HUD_EFFECTS` is what the committed code tests for.
-SHADER_DIR="${HUD_SHADER_DIR:-$HOME/.config/claude-unlimited/hud-shaders}"
+SHADER_DIR="${HUD_SHADER_DIR:-$HOME/.config/tokenwell/hud-shaders}"
+if [ -z "${HUD_SHADER_DIR:-}" ] && [ ! -d "$SHADER_DIR" ] && [ -d "$HOME/.config/claude-unlimited/hud-shaders" ]; then
+  SHADER_DIR="$HOME/.config/claude-unlimited/hud-shaders"
+fi
 EFFECTS_DIR="$SHADER_DIR/hud-effects"
 GENERATED="$(pwd)/Sources/HUD/Generated"
 SWIFT_FLAGS=()
@@ -68,7 +71,7 @@ else
 fi
 
 # A release build is universal (Apple Silicon + Intel): it is what every Mac
-# that installs Claude Unlimited downloads, and an arm64-only binary installs
+# that installs Tokenwell downloads, and an arm64-only binary installs
 # fine on an Intel Mac and then never launches. A local build stays native.
 if [ -n "$RELEASE" ]; then
   swift build -c release --arch arm64 --arch x86_64 ${SWIFT_FLAGS[@]+"${SWIFT_FLAGS[@]}"}

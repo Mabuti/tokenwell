@@ -1,15 +1,14 @@
 <div align="center">
 
-# Claude Unlimited
+# Tokenwell
 
 ### When one account hits its usage limit, your session doesn't.
 
-Claude Unlimited pools your Claude (Pro · Max), ChatGPT/Codex, and Anthropic API accounts
+Tokenwell pools your Claude (Pro · Max), ChatGPT/Codex, and Anthropic API accounts
 into one continuous supply for Claude Code. When an account runs dry, the next one takes
 over on the very next request — same session, same context, same terminal. You keep typing.
 
-*This is a fork of [DevDock-AI/claude-unlimited](https://github.com/DevDock-AI/claude-unlimited)
-carrying configurable launch commands, a configurable listen port, and a WSL install path.*
+Tokenwell is derived from [DevDock-AI/claude-unlimited](https://github.com/DevDock-AI/claude-unlimited) (MIT).
 
 <br>
 
@@ -30,7 +29,7 @@ the session — the account underneath you changes and nothing else does. Often 
 dashboard's activity log is the only place you'll find out it happened.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/Mabuti/claude-unlimited/actions/workflows/ci.yml/badge.svg)](https://github.com/Mabuti/claude-unlimited/actions/workflows/ci.yml)
+[![CI](https://github.com/Mabuti/tokenwell/actions/workflows/ci.yml/badge.svg)](https://github.com/Mabuti/tokenwell/actions/workflows/ci.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Backend dependencies](https://img.shields.io/badge/backend%20dependencies-1-brightgreen)
@@ -40,7 +39,7 @@ dashboard's activity log is the only place you'll find out it happened.
 
 <br>
 
-<img src="docs/screenshots/overview.png" alt="Claude Unlimited dashboard">
+<img src="docs/screenshots/overview.png" alt="Tokenwell dashboard">
 
 </div>
 
@@ -50,7 +49,7 @@ dashboard's activity log is the only place you'll find out it happened.
 
 | | |
 |---|---|
-| **[Why Claude Unlimited](#why-claude-unlimited)** | The problem it removes |
+| **[Why Tokenwell](#why-tokenwell)** | The problem it removes |
 | **[Features](#features)** | What you get |
 | **[How it works](#how-it-works)** | The flow, and why nothing leaves your machine |
 | **[Install](#install)** | One line |
@@ -74,7 +73,7 @@ dashboard's activity log is the only place you'll find out it happened.
 
 ---
 
-## Why Claude Unlimited
+## Why Tokenwell
 
 You're deep in a Claude Code session. Context is loaded, the plan is working — and you hit
 your usage limit.
@@ -82,7 +81,7 @@ your usage limit.
 The manual workaround is grim: write yourself a handover note, log out, log into another
 account, paste the note back, and hope nothing important got lost.
 
-**Claude Unlimited removes that moment entirely.** When one account approaches its limit,
+**Tokenwell removes that moment entirely.** When one account approaches its limit,
 the next one takes over on the very next request. Same session, same context, same
 terminal. You don't get logged out, you don't get prompted, you don't restart anything.
 Often the first you'll know about it is a line in the activity log.
@@ -91,7 +90,7 @@ It pools whatever you've got — Claude Pro/Max subscriptions, ChatGPT/Codex sub
 Anthropic API keys, your own gateway — and treats them as one continuous supply.
 
 > Other multi-account tools automate the swap too, but they're CLI-only. There's nowhere
-> to *see* what's happening. Claude Unlimited's control surface is a real dashboard.
+> to *see* what's happening. Tokenwell's control surface is a real dashboard.
 
 ---
 
@@ -113,7 +112,7 @@ Anthropic API keys, your own gateway — and treats them as one continuous suppl
 | 🌿 | **[ECO](#eco--efficient-context-optimization)** — shortens what tools printed before it is sent, so the same work costs fewer tokens. Off by default; only tool output is ever rewritten. |
 | 🎛️ | **[HUD - Heads-Up Display](#hud---heads-up-display-macos)** — a floating macOS dock showing every account's usage at a glance, always on top if you want it. |
 | 🔒 | **100% local** — no account, no telemetry, no cloud. Your credentials never leave your machine. |
-| ⚙️ | **One command to work** — `claude-unlimited code` and you're routed. |
+| ⚙️ | **One command to work** — `tokenwell code` and you're routed. |
 | 🔔 | **Notifications** — told before you run out, not after. |
 | 🔑 | **OS-native credential storage** — Keychain / Secret Service / DPAPI. Never plaintext on disk. |
 | 📦 | **Encrypted export/import** — move your whole setup to another machine safely. |
@@ -130,7 +129,7 @@ Anthropic API keys, your own gateway — and treats them as one continuous suppl
       │   ANTHROPIC_BASE_URL=http://127.0.0.1:4317
       ▼
 ╔═══════════════════════════════════════════════╗
-║   Claude Unlimited daemon — YOUR MACHINE      ║   127.0.0.1 only.
+║   Tokenwell daemon — YOUR MACHINE      ║   127.0.0.1 only.
 ║                                               ║   Not reachable from
 ║   ┌─────────────────────────────────────┐     ║   your network, let
 ║   │  Router — picks the account         │     ║   alone the internet.
@@ -165,7 +164,7 @@ on through a switch without noticing one happened.
 
 This is the part worth being explicit about:
 
-- **No account. No sign-up. No cloud component.** There is no Claude Unlimited server. It
+- **No account. No sign-up. No cloud component.** There is no Tokenwell server. It
   cannot phone home, because there is no home.
 - **No telemetry, ever.** Usage stats, cost estimates, the activity log, project
   attribution — all of it is written to files in your home directory and read by a
@@ -195,7 +194,7 @@ Pick your system, copy the **one line**, paste, done. It installs everything it 
 **🍎 macOS & 🐧 Linux** — paste into a terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Mabuti/claude-unlimited/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Mabuti/tokenwell/main/install.sh | bash
 ```
 
 **Under WSL?** Read [Installing under WSL](#installing-under-wsl) instead of pasting that —
@@ -204,28 +203,28 @@ it's the same install, with three things WSL doesn't give you handled in order.
 **🪟 Windows** — press **Win + R** (or open **Command Prompt**), paste, press Enter:
 
 ```bat
-powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://raw.githubusercontent.com/Mabuti/claude-unlimited/main/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://raw.githubusercontent.com/Mabuti/tokenwell/main/install.ps1 | iex"
 ```
 
 **🪟 Windows, already in PowerShell?** — paste this shorter version instead:
 
 ```powershell
-irm https://raw.githubusercontent.com/Mabuti/claude-unlimited/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/Mabuti/tokenwell/main/install.ps1 | iex
 ```
 
-Then run `claude-unlimited code` and you're routed. On Windows, run the installer from an
+Then run `tokenwell code` and you're routed. On Windows, run the installer from an
 **Administrator** PowerShell if you also want it to start automatically at logon;
 credentials are stored with Windows DPAPI instead of the Keychain.
 
-> **Which platform is this best on?** Claude Unlimited is developed and tested on
+> **Which platform is this best on?** Tokenwell is developed and tested on
 > **macOS**, so that's the most battle-hardened path. **Windows and Linux are best-effort:**
 > every OS-specific piece (credential storage, the background service, the installer) is
 > implemented and covered by tests, and it *should* work fine — but it hasn't had the same
 > real-world mileage, so treat it as "should be fine, not guaranteed." If anything's off,
-> please [open an issue](https://github.com/Mabuti/claude-unlimited/issues).
+> please [open an issue](https://github.com/Mabuti/tokenwell/issues).
 
 Don't want it starting on login? Turn it off in **Settings → Daemon**, or run
-`claude-unlimited uninstall`. It keeps running either way until you stop it.
+`tokenwell uninstall`. It keeps running either way until you stop it.
 
 > **Using an AI agent to set this up?** Point it at
 > [`AGENTS.md`](AGENTS.md) — it spells out the install, what's safe, and the
@@ -236,8 +235,8 @@ Don't want it starting on login? Turn it off in **Settings → Daemon**, or run
 
 <br>
 
-The installer creates an isolated environment at `~/.local/share/claude-unlimited/`,
-links `claude-unlimited` into `~/.local/bin`, runs `claude-unlimited doctor`, and
+The installer creates an isolated environment at `~/.local/share/tokenwell/`,
+links `tokenwell` into `~/.local/bin`, runs `tokenwell doctor`, and
 registers the daemon as a login service (`launchd` / `systemd --user` / Task Scheduler).
 It touches nothing else, and tells you if `~/.local/bin` isn't on your `PATH`.
 
@@ -247,14 +246,24 @@ says so rather than pretending it succeeded.
 Prefer to read it first, or install from a checkout?
 
 ```bash
-git clone https://github.com/Mabuti/claude-unlimited.git
-cd claude-unlimited
+git clone https://github.com/Mabuti/tokenwell.git
+cd tokenwell
 ./install.sh
 ```
 
 Requires **Python 3.10+**, **git**, and the **`claude`** CLI on your `PATH`.
 
 </details>
+
+### Upgrading from Claude Unlimited
+
+The first Tokenwell start migrates `~/.claude-unlimited` to `~/.tokenwell` on POSIX, renames the
+database and its WAL files, and leaves a compatibility symlink at the old path. Secret-store
+credentials migrate on read: Tokenwell writes and verifies the new entry before removing the old
+one. The old service is removed. `cu` and `claude-unlimited` continue to work. Installs made with
+`install.sh` need one reinstall from the new URL; editable installs need one `pip install -e .`.
+
+Migration is forward-only. Back up `~/.claude-unlimited` first if you may want to roll back.
 
 ### Installing under WSL
 
@@ -286,8 +295,8 @@ installer still runs, but only for that terminal session, and says so.
 **2. Install from a checkout**, not the one-liner, so that updating is a `git pull` away:
 
 ```bash
-git clone https://github.com/Mabuti/claude-unlimited.git
-cd claude-unlimited
+git clone https://github.com/Mabuti/tokenwell.git
+cd tokenwell
 ./install.sh
 ```
 
@@ -295,7 +304,7 @@ If the output says **Install failed** — typically *Failed to connect to user s
 stop there, even though the installer carries on to its normal closing lines. That means
 the service wasn't registered and step 3 has nothing to attach to. Check
 `systemctl --user is-system-running`, fix step 1 if it isn't `running`, then
-`claude-unlimited install` before going on.
+`tokenwell install` before going on.
 
 The dashboard usually won't open by itself under WSL (no `xdg-open` on a stock distro) —
 open the printed URL in a Windows browser. And read `doctor`'s "Secret store: OK" narrowly: it means the
@@ -320,9 +329,9 @@ password typed into that dialog is one nothing can supply at boot. After your ne
 reboot, every account will look exhausted (see [Troubleshooting](#troubleshooting)).
 
 **Updating:** From a checkout, `git pull` then `./install.sh` again —
-`claude-unlimited restart` on its own only restarts the code that's already installed.
+`tokenwell restart` on its own only restarts the code that's already installed.
 Or let the in-app updater handle it under **Settings → Updates**, which replaces
-`~/.local/share/claude-unlimited/app` instead. Read [Updates](#updates) before touching
+`~/.local/share/tokenwell/app` instead. Read [Updates](#updates) before touching
 that setting.
 
 ---
@@ -332,7 +341,7 @@ that setting.
 <img src="docs/logos/claude.png" height="14" alt=""> **Claude Pro or Max**
 
 ```bash
-claude-unlimited add-account
+tokenwell add-account
 ```
 
 Opens your browser, logs into the account, and adds it. That's it — no account IDs to find
@@ -348,7 +357,7 @@ your machine is never touched. Run it again for each additional account.
 <img src="docs/logos/openai.png" height="14" alt=""> **ChatGPT Plus, Pro, or Business — used through Codex**
 
 ```bash
-claude-unlimited add-codex-account
+tokenwell add-codex-account
 ```
 
 Same flow, for a ChatGPT/Codex account. Once added, it joins the same rotation — Claude
@@ -358,11 +367,11 @@ to and from OpenAI's transparently, streaming included.
 Also isolated: your existing `codex` login is left alone.
 
 The same account also serves the real Codex CLI, routed through the pool with
-[`claude-unlimited codex`](#using-the-codex-cli).
+[`tokenwell codex`](#using-the-codex-cli).
 
 ### Purchased credits
 
-A ChatGPT account can hold purchased credits on top of its plan. Claude Unlimited reads the
+A ChatGPT account can hold purchased credits on top of its plan. Tokenwell reads the
 balance from the account's own responses and shows it on the profile card, so an account
 sitting idle at 100% while you have credits on it is no longer a mystery.
 
@@ -512,20 +521,20 @@ refused model.
 ### Start working
 
 ```bash
-claude-unlimited code
+tokenwell code
 ```
 
 Starts the daemon if it isn't running and launches `claude` routed through your pool. With
 more than one account it asks which to use — or pick **Rotated accounts** to let it manage
 itself.
 
-> **Tip:** `cu` is a shorthand for `claude-unlimited` — every command works under both names
+> **Tip:** `cu` is a shorthand for `tokenwell` — every command works under both names
 > (`cu code`, `cu status`, `cu doctor`, …). An existing install gains `cu` after an update.
 
 ```bash
-claude-unlimited code --profile "Personal Max"   # pin this session to one account
-claude-unlimited code --distribute               # balance agents across accounts
-claude-unlimited code --model opus               # any extra args pass through to claude
+tokenwell code --profile "Personal Max"   # pin this session to one account
+tokenwell code --distribute               # balance agents across accounts
+tokenwell code --model opus               # any extra args pass through to claude
 ```
 
 The dashboard URL stays in Claude Code's status line while you work.
@@ -623,7 +632,7 @@ machine — it falls back to **200K**, because it has no way to tell what is on 
 of that address.
 
 For a Claude or Anthropic-API account that caution is unnecessary: the daemon relays to
-Anthropic with your own credential, so the full window really is there. Claude Unlimited says
+Anthropic with your own credential, so the full window really is there. Tokenwell says
 so on your behalf, and you get the million back:
 
 | Model | `cu code`, before | `cu code`, now |
@@ -693,7 +702,7 @@ session compacts far less often, which is usually what you actually wanted.
 ### Balancing sessions and subagents across accounts
 
 A Claude Code session isn't one caller: the main agent and every subagent it spawns send
-their own requests, and Claude Code labels each one. Claude Unlimited can route them
+their own requests, and Claude Code labels each one. Tokenwell can route them
 separately.
 
 **`code --distribute`** balances the session across your pool. Each new agent — the main
@@ -717,7 +726,7 @@ it can serve, preserving its own prompt cache instead of paying a cache miss on 
 > evens out roughly over many sessions rather than exactly.
 
 While agents are spread out, each profile on the dashboard shows how many Claude Code
-main agents and subagents, plus any app session that sends `x-claude-unlimited-session`,
+main agents and subagents, plus any app session that sends `x-tokenwell-session`,
 were active in the last 5 minutes (**Agents: N**), and every agent moved off an unavailable
 account is logged in Activity. Codex CLI sessions are outside this count.
 
@@ -757,10 +766,10 @@ The desktop app can send its inference through your pool too, not just the
 terminal:
 
 ```bash
-claude-unlimited desktop
+tokenwell desktop
 ```
 
-It creates an inference profile named **Claude Unlimited** in the app, points it
+It creates an inference profile named **Tokenwell** in the app, points it
 at the local daemon, makes it active, and starts the app. Any inference profiles
 you already have are left alone.
 
@@ -776,11 +785,11 @@ you already have are left alone.
 write, and:
 
 ```bash
-claude-unlimited desktop --revert
+tokenwell desktop --revert
 ```
 
 restores it. Quit the app before reverting too, for the same reason. The
-inference profile named *Claude Unlimited* stays in the app's list — remove it
+inference profile named *Tokenwell* stays in the app's list — remove it
 there if you no longer want it.
 
 Three things worth knowing:
@@ -794,8 +803,8 @@ Three things worth knowing:
   fails with *No eligible Profile available*, which looks like a configuration
   error but isn't.
 
-This is the only command that writes outside `~/.claude-unlimited/` and
-`~/.local/share/claude-unlimited/`; it touches
+This is the only command that writes outside `~/.tokenwell/` and
+`~/.local/share/tokenwell/`; it touches
 `~/Library/Application Support/Claude*`, and only when you run it. macOS only
 for now. The Help page in the dashboard also documents the manual route, if you
 would rather set it up in the app yourself.
@@ -805,7 +814,7 @@ would rather set it up in the app yourself.
 Not just Claude Code — the real **Codex CLI** can run through the pool too:
 
 ```bash
-claude-unlimited codex
+tokenwell codex
 ```
 
 Starts the daemon if it isn't running, then launches `codex` with its own model provider
@@ -814,15 +823,15 @@ never by a Claude account.
 
 **Before you run it:**
 - At least one enabled Codex/ChatGPT account — add one with
-  [`claude-unlimited add-codex-account`](#add-a-chatgpt--codex-subscription), or enable one
+  [`tokenwell add-codex-account`](#add-a-chatgpt--codex-subscription), or enable one
   in the dashboard.
 - The Codex CLI (`codex`) itself installed and on `PATH`. Without it, `cu codex` stops before
   starting anything: *"Codex CLI (`codex`) not found on PATH. Install it first:
   https://github.com/openai/codex"*.
 
 ```bash
-claude-unlimited codex --account "Personal ChatGPT"        # pin this session to one account
-claude-unlimited codex exec "list the files in this repo"  # codex's own `exec`, unmodified
+tokenwell codex --account "Personal ChatGPT"        # pin this session to one account
+tokenwell codex exec "list the files in this repo"  # codex's own `exec`, unmodified
 ```
 
 With more than one enabled Codex account, it asks which to use, the same way `cu code` does —
@@ -852,7 +861,7 @@ Codex) accounts do.
 
 ### Your project setup is untouched
 
-`claude-unlimited code` runs the same `claude` binary in the same directory. Your
+`tokenwell code` runs the same `claude` binary in the same directory. Your
 `CLAUDE.md`, `.claude/` settings, skills, subagents, memory, and session history all
 behave exactly as they normally do. The only thing that changes is which account serves
 the request.
@@ -868,7 +877,7 @@ says so when it happens. Nothing else in `env` is touched, and no file is modifi
 > claude.ai-hosted connectors are disabled for that session. Locally-configured MCP
 > servers are unaffected.
 
-The same holds for `claude-unlimited codex`: it points the real Codex CLI at the pool with
+The same holds for `tokenwell codex`: it points the real Codex CLI at the pool with
 command-line overrides only, and never edits `~/.codex/config.toml` or anything else under
 `CODEX_HOME` itself — Codex's own writes under `CODEX_HOME` are unaffected.
 
@@ -884,7 +893,7 @@ such label, so by default each request is routed on its own — and a batch of r
 land on several accounts, each one paying a fresh cache miss. Send a stable id instead:
 
 ```http
-x-claude-unlimited-session: cv-screening-worker-1
+x-tokenwell-session: cv-screening-worker-1
 ```
 
 Every request carrying that id is treated as one session: it stays on the account it
@@ -1043,7 +1052,7 @@ Adapted from the [Caveman](https://github.com/juliusbrussee/caveman) skill by Ju
 A small floating dock that shows every account as a circle with its usage rings, so you can
 see the state of your pool without opening the dashboard.
 
-**On macOS you get it automatically.** Installing or updating Claude Unlimited installs
+**On macOS you get it automatically.** Installing or updating Tokenwell installs
 `HUD - Heads-Up Display.app` into `~/Applications`, registers it to start when you log in,
 and opens it — nothing to build, nothing to run. It also appears in the menu bar, showing
 the first account in its 15-minute recent-use grace (or the rotation pointer when none is
@@ -1158,16 +1167,16 @@ notification** there to confirm they reach you.
 
 ## Updates
 
-> **On this fork:** the updater points at this repository (Mabuti/claude-unlimited),
+> **On this fork:** the updater points at this repository (Mabuti/tokenwell),
 > never upstream. Releases are cut here — see
 > [`docs/RELEASING.md`](docs/RELEASING.md). The default mode, *Auto-download only*,
 > stages a verified copy but never installs without a click — **Fully manual** is a
 > preference, not a safety fix. If you installed from a checkout (`./install.sh` after
 > cloning), you can keep updating that way — `git pull` then `./install.sh` — or let the
 > in-app updater take over instead; an in-app install replaces
-> `~/.local/share/claude-unlimited/app`, so pick one path, not both.
+> `~/.local/share/tokenwell/app`, so pick one path, not both.
 
-Claude Unlimited checks for new releases on its own and does exactly what you
+Tokenwell checks for new releases on its own and does exactly what you
 tell it to in **Settings → Updates**:
 
 | Mode | What happens when a release is found |
@@ -1210,10 +1219,10 @@ Every command below also works under the short alias **`cu`** — e.g. `cu code`
 
 | Command | What it's for |
 |---|---|
-| `claude-unlimited doctor` | Checks your install, credential storage, and config. Run it first, and whenever something seems off. |
-| `claude-unlimited add-account` | Adds a Claude subscription via browser login. Isolated — never disturbs your existing `claude` login. |
-| `claude-unlimited add-codex-account` | Same, for a ChatGPT/Codex subscription. |
-| `claude-unlimited reauth [--profile <id>]` | The **Reauth** button and command appear on **Overview** cards of Claude OAuth (subscription) Profiles that need re-auth. Without `--profile`, it offers a picker; with it, use the Profile's **id**, not its display name. Clicking **Reauth** opens a terminal: on WSL and Linux desktops it runs this install's reauth in a login shell, so `claude` is on `PATH`; on Windows and macOS it opens a new terminal running this install's interpreter. The command on the card is the one to paste into your own terminal on every platform. |
+| `tokenwell doctor` | Checks your install, credential storage, and config. Run it first, and whenever something seems off. |
+| `tokenwell add-account` | Adds a Claude subscription via browser login. Isolated — never disturbs your existing `claude` login. |
+| `tokenwell add-codex-account` | Same, for a ChatGPT/Codex subscription. |
+| `tokenwell reauth [--profile <id>]` | The **Reauth** button and command appear on **Overview** cards of Claude OAuth (subscription) Profiles that need re-auth. Without `--profile`, it offers a picker; with it, use the Profile's **id**, not its display name. Clicking **Reauth** opens a terminal: on WSL and Linux desktops it runs this install's reauth in a login shell, so `claude` is on `PATH`; on Windows and macOS it opens a new terminal running this install's interpreter. The command on the card is the one to paste into your own terminal on every platform. |
 
 </details>
 
@@ -1224,13 +1233,13 @@ Every command below also works under the short alias **`cu`** — e.g. `cu code`
 
 | Command | What it's for |
 |---|---|
-| `claude-unlimited code` | **The one you'll use.** Launches `claude` routed through your pool — or whatever **Settings → Launch commands** has in its place. Also repairs the `cu` shortcut if an update dropped it. |
-| `claude-unlimited code --profile <name>` | Pin the session to one account instead of rotating. |
-| `claude-unlimited code --distribute` | Balance the session across accounts — the main agent and each subagent start on the account with fewest agents active in the last 5 minutes (an open response or recent activity), keep that account while it can serve, and move when the account reaches its switch threshold or a usage limit, becomes unavailable, has no new request for an hour, or returns a transient 429 another account can take; the pin is retained for up to one hour. |
-| `claude-unlimited codex [--port <n>] [--account <name>] [--] [codex args…]` | Launches the real **Codex CLI**, routed through your pool's enabled Codex/ChatGPT accounts — needs at least one (add-codex-account). Routes with `-c` overrides on the command line only; it never edits `~/.codex/config.toml`. A Codex session never moves the Claude Code rotation, and each Codex session stays on the account that served it until that account runs out, needs re-auth or is cooling down. With more than one enabled Codex account, prompts you to pick one — default is rotated accounts, the same as `cu code` — and `--account <name>` skips the prompt. `--port`, `--account` and `-h`/`--help` are read only right after `codex`, before any other argument (use `cu codex -- --help` for Codex's own help): from the first other argument on, everything goes to `codex` verbatim and in order — including Codex's own `-p`/`--profile`, and a `--port` or `--account` meant for Codex (`cu codex exec --port 9` hands `--port 9` to Codex) — and a `--` right after these options is dropped. |
-| `claude-unlimited desktop` | Route the Claude **desktop app** through your pool, then launch it. `--revert` undoes it. |
-| `claude-unlimited status` | Is the daemon installed and running, and its pid. |
-| `claude-unlimited start` | Run the daemon in this terminal (Ctrl-C to stop). `--port` overrides for this run only; otherwise `CLAUDE_UNLIMITED_PORT` if set, then the port saved in Settings. |
+| `tokenwell code` | **The one you'll use.** Launches `claude` routed through your pool — or whatever **Settings → Launch commands** has in its place. Also repairs the `cu` shortcut if an update dropped it. |
+| `tokenwell code --profile <name>` | Pin the session to one account instead of rotating. |
+| `tokenwell code --distribute` | Balance the session across accounts — the main agent and each subagent start on the account with fewest agents active in the last 5 minutes (an open response or recent activity), keep that account while it can serve, and move when the account reaches its switch threshold or a usage limit, becomes unavailable, has no new request for an hour, or returns a transient 429 another account can take; the pin is retained for up to one hour. |
+| `tokenwell codex [--port <n>] [--account <name>] [--] [codex args…]` | Launches the real **Codex CLI**, routed through your pool's enabled Codex/ChatGPT accounts — needs at least one (add-codex-account). Routes with `-c` overrides on the command line only; it never edits `~/.codex/config.toml`. A Codex session never moves the Claude Code rotation, and each Codex session stays on the account that served it until that account runs out, needs re-auth or is cooling down. With more than one enabled Codex account, prompts you to pick one — default is rotated accounts, the same as `cu code` — and `--account <name>` skips the prompt. `--port`, `--account` and `-h`/`--help` are read only right after `codex`, before any other argument (use `cu codex -- --help` for Codex's own help): from the first other argument on, everything goes to `codex` verbatim and in order — including Codex's own `-p`/`--profile`, and a `--port` or `--account` meant for Codex (`cu codex exec --port 9` hands `--port 9` to Codex) — and a `--` right after these options is dropped. |
+| `tokenwell desktop` | Route the Claude **desktop app** through your pool, then launch it. `--revert` undoes it. |
+| `tokenwell status` | Is the daemon installed and running, and its pid. |
+| `tokenwell start` | Run the daemon in this terminal (Ctrl-C to stop). `--port` overrides for this run only; otherwise `TOKENWELL_PORT` if set, then the port saved in Settings. |
 
 </details>
 
@@ -1243,12 +1252,12 @@ Auto-start on login — the same thing **Settings → Daemon** controls.
 
 | Command | What it's for |
 |---|---|
-| `claude-unlimited install` | Start automatically on login (`launchd` / `systemd --user` / Task Scheduler), and start now. |
-| `claude-unlimited uninstall` | Stop starting on login. |
-| `claude-unlimited service-start` | Start the background daemon now. |
-| `claude-unlimited service-stop` | Stop it. |
-| `claude-unlimited hud install` / `status` / `remove` | macOS only. The HUD installs and updates itself, so this is rarely needed: `install` brings it back (or re-downloads it), `status` shows whether it is installed and starts at login, `remove` takes it away **and keeps it away** until you run `install`. |
-| `claude-unlimited restart` | Stop and start the daemon, service-managed or not. Needed after an update replaces the code, since a running process keeps serving the version it started with. |
+| `tokenwell install` | Start automatically on login (`launchd` / `systemd --user` / Task Scheduler), and start now. |
+| `tokenwell uninstall` | Stop starting on login. |
+| `tokenwell service-start` | Start the background daemon now. |
+| `tokenwell service-stop` | Stop it. |
+| `tokenwell hud install` / `status` / `remove` | macOS only. The HUD installs and updates itself, so this is rarely needed: `install` brings it back (or re-downloads it), `status` shows whether it is installed and starts at login, `remove` takes it away **and keeps it away** until you run `install`. |
+| `tokenwell restart` | Stop and start the daemon, service-managed or not. Needed after an update replaces the code, since a running process keeps serving the version it started with. |
 
 </details>
 
@@ -1259,7 +1268,7 @@ Auto-start on login — the same thing **Settings → Daemon** controls.
 
 | Command | What it's for |
 |---|---|
-| `claude-unlimited purge` | Removes everything: stored credentials, config, usage history, the app and its virtualenv, the CLI symlink, the service registration, and on macOS the HUD. If the Claude desktop app was routed through the pool, its own settings are restored first. Asks for confirmation first, unless you pass `--yes`. `~/.claude` is never touched. |
+| `tokenwell purge` | Removes everything: stored credentials, config, usage history, the app and its virtualenv, the CLI symlink, the service registration, and on macOS the HUD. If the Claude desktop app was routed through the pool, its own settings are restored first. Asks for confirmation first, unless you pass `--yes`. `~/.claude` is never touched. |
 
 Credentials are deleted from your OS keystore *before* the config goes, since
 the config is the only record of which Profiles exist.
@@ -1271,7 +1280,7 @@ the config is the only record of which Profiles exist.
 ## Troubleshooting
 
 <details>
-<summary><b>"Claude Unlimited — all profiles are out of capacity"</b></summary>
+<summary><b>"Tokenwell — all profiles are out of capacity"</b></summary>
 <br>
 
 Every enabled account has used up its window. Requests are answered with **503** and that
@@ -1297,7 +1306,7 @@ account is currently in rotation. If they don't, clicking **Reauth** opens a ter
 and Linux desktops it runs this install's reauth in a login shell, so `claude` is on `PATH`; on
 Windows and macOS it opens a new terminal running this install's interpreter. The command on
 the card is the one to paste into your own terminal on every platform. You can also run
-`claude-unlimited reauth --profile <id>` to target one OAuth
+`tokenwell reauth --profile <id>` to target one OAuth
 Profile directly. Without the flag, it lists whichever accounts actually need it, so there's
 no guessing.
 Once it is signed back in, its usage is read straight away, so the Dashboard and the HUD
@@ -1323,7 +1332,7 @@ upstream*.
 </details>
 
 <details>
-<summary><b><code>claude-unlimited: command not found</code></b></summary>
+<summary><b><code>tokenwell: command not found</code></b></summary>
 <br>
 
 `~/.local/bin` isn't on your `PATH`:
@@ -1338,12 +1347,12 @@ export PATH="$HOME/.local/bin:$PATH"
 <br>
 
 ```bash
-claude-unlimited status
-claude-unlimited doctor
+tokenwell status
+tokenwell doctor
 ```
 
-If it's installed but stopped: `claude-unlimited service-start`. Logs are in
-`~/.claude-unlimited/logs/`.
+If it's installed but stopped: `tokenwell service-start`. Logs are in
+`~/.tokenwell/logs/`.
 </details>
 
 <details>
@@ -1364,21 +1373,21 @@ The dashboard won't "change" to the port it's already on, so start it on a scrat
 for this one step:
 
 ```bash
-claude-unlimited start --port 4401        # scratch port; dashboard at http://127.0.0.1:4401/
+tokenwell start --port 4401        # scratch port; dashboard at http://127.0.0.1:4401/
 #   → Settings → Port → 4400 → Apply
 #   Ctrl-C
-claude-unlimited install                  # no flag: reads the saved port
+tokenwell install                  # no flag: reads the saved port
 ```
 
 You'll see either *Saved — applies the next time the daemon starts* (no service registered
 yet) or *Moving the dashboard to port 4400* (a service was already registered and has just
 been rewritten). Ctrl-C the scratch daemon either way; `install` is then harmless.
 
-Or skip the dashboard: put `{"settings": {"port": 4400}}` in `~/.claude-unlimited/config.json`
+Or skip the dashboard: put `{"settings": {"port": 4400}}` in `~/.tokenwell/config.json`
 — create the file if it doesn't exist, merge into `settings` if it does — and run
-`claude-unlimited install`.
+`tokenwell install`.
 
-Every later command resolves to the saved port, unless `CLAUDE_UNLIMITED_PORT` is set,
+Every later command resolves to the saved port, unless `TOKENWELL_PORT` is set,
 which wins. `--port` on its own is for that one run and isn't remembered. Once the service
 is installed, **Settings → Port** does the restart and the unit rewrite for you.
 </details>
@@ -1408,7 +1417,7 @@ starting anything, so nothing is launched. Install it from
 <br>
 
 `cu codex` only routes through codex-kind Profiles — an Anthropic/Claude account can never
-serve it, enabled or not. Add a Codex/ChatGPT account with `claude-unlimited add-codex-account`,
+serve it, enabled or not. Add a Codex/ChatGPT account with `tokenwell add-codex-account`,
 or enable one you already added, in the dashboard.
 </details>
 
@@ -1464,7 +1473,7 @@ version that does — the update check is one of the calls that fails. Either:
   operating system's trust, not Python's, so it installs the current version:
 
   ```bash
-  curl -fsSL https://raw.githubusercontent.com/Mabuti/claude-unlimited/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/Mabuti/tokenwell/main/install.sh | bash
   ```
 
 - **Or fix Python's store**: run *Install Certificates.command* from the Python folder in
@@ -1479,9 +1488,9 @@ version that does — the update check is one of the calls that fails. Either:
 | What | Where |
 |---|---|
 | Credentials | macOS Keychain / Linux Secret Service / Windows DPAPI — never plaintext on disk |
-| Account configuration | `~/.claude-unlimited/config.json` |
-| Usage history, activity log, project attribution | `~/.claude-unlimited/claude_unlimited.db` — one local SQLite file, kept in full (older `*.jsonl` logs are imported once on first start and renamed `*.imported`) |
-| Logs | `~/.claude-unlimited/logs/` |
+| Account configuration | `~/.tokenwell/config.json` |
+| Usage history, activity log, project attribution | `~/.tokenwell/tokenwell.db` — one local SQLite file, kept in full (older `*.jsonl` logs are imported once on first start and renamed `*.imported`) |
+| Logs | `~/.tokenwell/logs/` |
 | Your Claude Code setup | `~/.claude` — untouched |
 
 ## Security
@@ -1507,7 +1516,7 @@ Full threat model and vulnerability reporting: [`SECURITY.md`](SECURITY.md).
 
 ## A note on Terms of Service
 
-Claude Unlimited automates something you could do by hand: switching to another of your
+Tokenwell automates something you could do by hand: switching to another of your
 own accounts when one runs low. It uses only credentials you configure, runs entirely on
 your machine, and is fully open source.
 
@@ -1528,11 +1537,11 @@ needs nothing but the standard library and `cryptography`.
 
 The HUD's pure logic (edge snapping) has its own tests: `cd macos-widget && swift test`.
 
-No frontend build step — `claude_unlimited/static/` is plain HTML/CSS/JS.
+No frontend build step — `tokenwell/static/` is plain HTML/CSS/JS.
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the module map, and
 [`CONTRIBUTING.md`](CONTRIBUTING.md) for the ground rules.
 
-Adding a language is one file: copy `claude_unlimited/locales/en.json` and translate it.
+Adding a language is one file: copy `tokenwell/locales/en.json` and translate it.
 
 ## Roadmap
 
@@ -1555,7 +1564,7 @@ Bug reports and PRs welcome — especially from Linux and Windows users.
 [MIT](LICENSE) — do whatever you'd like with it.
 
 <sub>Statistics charts use <a href="https://github.com/leeoniya/uPlot">uPlot</a> © Leon Sorokin,
-MIT (<a href="claude_unlimited/static/vendor/LICENSE">license</a>).</sub>
+MIT (<a href="tokenwell/static/vendor/LICENSE">license</a>).</sub>
 
 <div align="center">
 <br>

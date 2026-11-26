@@ -13,7 +13,7 @@ automatically from that tag.
    python3 scripts/check_gpt_windows.py
    ```
 
-1. Bump the version in **`claude_unlimited/__init__.py`**:
+1. Bump the version in **`tokenwell/__init__.py`**:
 
    ```python
    __version__ = "0.2.0"
@@ -35,7 +35,7 @@ automatically from that tag.
    `git commit -a`, which silently leaves out any file git does not track yet:
 
    ```bash
-   git add claude_unlimited/__init__.py macos-widget/HUD.sha256
+   git add tokenwell/__init__.py macos-widget/HUD.sha256
    git commit -m "chore(release): 0.2.0"
    ```
 
@@ -112,7 +112,7 @@ asked twice. If `HUD.sha256` names a different version than the one being
 installed, the installer does nothing — which is the correct behaviour for a
 release that shipped no HUD.
 
-The bundle is **ad-hoc signed**, so `claude_unlimited/hud.py` strips the
+The bundle is **ad-hoc signed**, so `tokenwell/hud.py` strips the
 quarantine attribute after unpacking; without that, a downloaded app refuses to
 launch. When there is a paid Developer ID to notarize with, that step goes away.
 
