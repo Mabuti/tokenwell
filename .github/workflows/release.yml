@@ -18,6 +18,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        # Parity tests read a pinned historical commit.
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:

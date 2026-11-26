@@ -3,8 +3,34 @@ published, so the order of these steps is not a style choice: publishing
 before the HUD is attached ships a release that can never get one."""
 
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _assert_pytest_jobs_use_full_history(workflow_name):
+    workflow = (ROOT / ".github" / "workflows" / workflow_name).read_text(encoding="utf-8")
+    jobs = workflow.split("\njobs:\n", 1)[1]
+    job_sections = re.finditer(
+        r"(?ms)^  (?P<name>[A-Za-z0-9_-]+):\n(?:(?!^  [A-Za-z0-9_-]+:).)*",
+        jobs,
+    )
+    for job in job_sections:
+        section = job.group(0)
+        if "pytest" not in section:
+            continue
+        checkout = re.search(
+            r"(?ms)^      - uses: actions/checkout@[^\n]+\n(?P<body>.*?)(?=^      - |\Z)",
+            section,
+        )
+        assert checkout and re.search(r"^\s+fetch-depth:\s*0\s*$", checkout.group("body"), re.MULTILINE), (
+            f"{workflow_name} job {job.group('name')} runs pytest without a full-history checkout"
+        )
+
+
+def test_pytest_jobs_checkout_full_history():
+    for workflow_name in ("ci.yml", "release.yml"):
+        _assert_pytest_jobs_use_full_history(workflow_name)
 
 
 def test_ci_creates_a_draft_never_a_published_release():
