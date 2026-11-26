@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -6 72 72" width="288" height="288" role="img" aria-labelledby="t">
+  <title id="t">Tokenwell</title>
+  <style>
+    .coin { animation: rise 2.6s ease-out infinite; }
+    .trail { animation: trail 2.6s ease-out infinite; }
+    .ripple { animation: ripple 2.6s ease-out infinite; }
+    .spark { opacity: 0; animation: 2.6s ease-out infinite; }
+    .s1 { animation-name: spark1; } .s2 { animation-name: spark2; } .s3 { animation-name: spark3; }
+    .s4 { animation-name: spark4; } .s5 { animation-name: spark5; } .s6 { animation-name: spark6; }
+    @keyframes rise {
+      0%   { transform: translateY(26px); opacity: 0; }
+      12%  { transform: translateY(18px); opacity: 1; }
+      55%  { transform: translateY(0); opacity: 1; }
+      72%  { transform: translateY(-3px); opacity: 0; }
+      100% { transform: translateY(-3px); opacity: 0; }
+    }
+    @keyframes trail {
+      0%, 18%  { opacity: 0; transform: translateY(10px); }
+      40%      { opacity: 1; transform: translateY(0); }
+      70%      { opacity: .5; }
+      85%, 100% { opacity: 0; }
+    }
+    @keyframes ripple {
+      0%, 8%   { transform: translateX(0); }
+      20%      { transform: translateX(2px); }
+      32%      { transform: translateX(-2px); }
+      44%, 100% { transform: translateX(0); }
+    }
+    @keyframes spark1 { 0%,58% { opacity: 0; transform: translate(0,0); } 66% { opacity: 1; } 90%,100% { opacity: 0; transform: translate(-12px,-8px); } }
+    @keyframes spark2 { 0%,58% { opacity: 0; transform: translate(0,0); } 66% { opacity: 1; } 90%,100% { opacity: 0; transform: translate(12px,-8px); } }
+    @keyframes spark3 { 0%,58% { opacity: 0; transform: translate(0,0); } 66% { opacity: 1; } 90%,100% { opacity: 0; transform: translate(0px,-14px); } }
+    @keyframes spark4 { 0%,58% { opacity: 0; transform: translate(0,0); } 66% { opacity: 1; } 90%,100% { opacity: 0; transform: translate(-14px,4px); } }
+    @keyframes spark5 { 0%,58% { opacity: 0; transform: translate(0,0); } 66% { opacity: 1; } 90%,100% { opacity: 0; transform: translate(14px,4px); } }
+    @keyframes spark6 { 0%,58% { opacity: 0; transform: translate(0,0); } 66% { opacity: 1; } 90%,100% { opacity: 0; transform: translate(0px,-6px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .coin, .trail, .ripple { animation: none; opacity: 1; transform: none; }
+      .spark { animation: none; opacity: 0; }
+    }
+  </style>
+  <g fill="#F2A93B">
+    <circle class="spark s1" cx="32" cy="10" r="1.8"/>
+    <circle class="spark s2" cx="32" cy="10" r="1.8"/>
+    <circle class="spark s3" cx="32" cy="10" r="1.6"/>
+    <circle class="spark s4" cx="32" cy="10" r="1.4"/>
+    <circle class="spark s5" cx="32" cy="10" r="1.4"/>
+    <circle class="spark s6" cx="32" cy="10" r="1.2"/>
+  </g>
+  <g class="trail" stroke="#3FB6C0" stroke-width="2.6" stroke-linecap="round">
+    <line x1="25" y1="20" x2="25" y2="25"/>
+    <line x1="32" y1="21" x2="32" y2="26.5"/>
+    <line x1="39" y1="20" x2="39" y2="25"/>
+  </g>
+  <g class="coin">
+    <circle cx="32" cy="10" r="8" fill="#F2A93B"/>
+    <circle cx="32" cy="10" r="4.5" fill="none" stroke="#B86E0C" stroke-width="2"/>
+  </g>
+  <rect x="12" y="33" width="40" height="26" rx="7" fill="#0E7C86"/>
+  <rect x="8" y="29" width="48" height="8" rx="4" fill="#0A4F5C"/>
+  <path class="ripple" d="M17 47 q3.75 -4 7.5 0 t7.5 0 t7.5 0 t7.5 0" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+</svg>

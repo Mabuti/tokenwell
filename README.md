@@ -1,5 +1,10 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/logos/tokenwell-dark.svg">
+  <img src="docs/logos/tokenwell.svg" alt="Tokenwell" width="610">
+</picture>
+
 # Tokenwell
 
 ### When one account hits its usage limit, your session doesn't.

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">Tokenwell</title>
+  <g stroke="#3FB6C0" stroke-width="2.6" stroke-linecap="round">
+    <line x1="25" y1="20" x2="25" y2="25"/>
+    <line x1="32" y1="21" x2="32" y2="26.5"/>
+    <line x1="39" y1="20" x2="39" y2="25"/>
+  </g>
+  <g>
+    <circle cx="32" cy="10" r="8" fill="#F2A93B"/>
+    <circle cx="32" cy="10" r="4.5" fill="none" stroke="#B86E0C" stroke-width="2"/>
+  </g>
+  <rect x="12" y="33" width="40" height="26" rx="7" fill="#0E7C86"/>
+  <rect x="8" y="29" width="48" height="8" rx="4" fill="#0A4F5C"/>
+  <path d="M17 47 q3.75 -4 7.5 0 t7.5 0 t7.5 0 t7.5 0" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+</svg>

@@ -1,0 +1,227 @@
+Tokenwell well mark: ASCII launch animation frames
+
+Each frame is 11 rows. Rows 0-5 are the sky above the well, rows 6-10 are the well
+(6 rim top, 7 rim, 8 and 9 water, 10 bottom). Rows are shown exactly as drawn; trailing
+spaces are not significant. Colours: coin characters gold #F2A93B, everything else
+water #3FB6C0. Plain ASCII only, no backslashes in any frame.
+Frame 13 is the static logo (the resting pose), the same block as LOGO at the end.
+Every block under a --- line is exactly 11 lines, blank sky rows included.
+
+--- 1 still water
+
+
+
+
+
+
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- 2 water stirs
+
+
+
+
+
+
+   ___________
+  [___________]
+   | ~ ~ ~ ~ |
+   |  ~ ~ ~  |
+   '---------'
+--- 3 coin surfaces
+
+
+
+
+
+
+   ___________
+  [___________]
+   |  ~(o)~  |
+   | ~ ~ ~ ~ |
+   '---------'
+--- 4 breaks the rim
+
+
+
+
+       .-.
+      ( o )
+   ____'-'____
+  [___________]
+   |  ~ | ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- 5 rising
+
+
+       .-.
+      ( o )
+       '-'
+      | | |
+   ___________
+  [___________]
+   | ~ ~ ~ ~ |
+   |  ~ ~ ~  |
+   '---------'
+--- 6 clear of the well
+       .-.
+      ( o )
+       '-'
+      | | |
+      : : :
+      . . .
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- 7 peak
+       .-.
+      ( o )
+       '-'
+      : : :
+      . . .
+
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- 8 starts to break up
+     . .-. .
+    * ( o ) *
+     ' '-' '
+      . . .
+
+
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- 9 dissipating
+    .  . .  .
+   *   .o.   *
+    '  ' '  '
+
+
+
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- 10 scattering
+  .     .     .
+ *      .      *
+  '     '     '
+
+
+
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- 11 gone
+ .             .
+
+ '             '
+
+
+
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- 12 still water
+
+
+
+
+
+
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- 13 static logo
+       .-.
+      ( o )
+       '-'
+      | | |
+      ' ' '
+
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+--- LOGO static logo
+       .-.
+      ( o )
+       '-'
+      | | |
+      ' ' '
+
+   ___________
+  [___________]
+   |  ~ ~ ~  |
+   |  ~ ~ ~  |
+   '---------'
+
+=== Gold spans (coin characters) per frame
+Format: row R cols S-E (0-based, end exclusive): text. Every character in the span is
+gold, spaces inside a span stay blank. Characters outside the spans use the water colour.
+Gold applies only to the coin: in frame 3 only '(o)' is gold, not the walls or waves; in
+frame 4 only the "'-'" in the rim top is gold, never the rim underscores.
+Sparks rows that carry no coin glyph (for example frame 9 rows 0 and 2) stay water,
+as in the approved reference.
+frame 1 still water:
+  (no gold)
+frame 2 water stirs:
+  (no gold)
+frame 3 coin surfaces:
+  row 8 cols 7-10: (o)
+frame 4 breaks the rim:
+  row 4 cols 7-10: .-.
+  row 5 cols 6-11: ( o )
+  row 6 cols 7-10: '-'
+frame 5 rising:
+  row 2 cols 7-10: .-.
+  row 3 cols 6-11: ( o )
+  row 4 cols 7-10: '-'
+frame 6 clear of the well:
+  row 0 cols 7-10: .-.
+  row 1 cols 6-11: ( o )
+  row 2 cols 7-10: '-'
+frame 7 peak:
+  row 0 cols 7-10: .-.
+  row 1 cols 6-11: ( o )
+  row 2 cols 7-10: '-'
+frame 8 starts to break up:
+  row 0 cols 5-12: . .-. .
+  row 1 cols 4-13: * ( o ) *
+  row 2 cols 5-12: ' '-' '
+frame 9 dissipating:
+  row 1 cols 3-14: *   .o.   *
+frame 10 scattering:
+  row 1 cols 1-16: *      .      *
+frame 11 gone:
+  (no gold)
+frame 12 still water:
+  (no gold)
+frame 13 static logo:
+  row 0 cols 7-10: .-.
+  row 1 cols 6-11: ( o )
+  row 2 cols 7-10: '-'
+LOGO static logo:
+  row 0 cols 7-10: .-.
+  row 1 cols 6-11: ( o )
+  row 2 cols 7-10: '-'
