@@ -1,15 +1,10 @@
-"""One test per behavior this FORK deliberately does differently from
-upstream DevDock-AI.
+"""One test per repository invariant that must survive future maintenance.
 
-This file exists because the v1.3.1 upstream merge (f369c9a) introduced FOUR
-defects, every one of them "a conflict resolved by taking upstream's side
-entire where the fork had deliberately diverged." The existing suite is
-overwhelmingly upstream's and caught only two of the four; the other two were
-caught by a human reading diffs. Invariants 11-14 below are those exact four
-defects. Every test here is meant to fail loudly the next time an upstream
-merge silently drops one of these — read the docstring on a failing test
-before "fixing" it by touching this file; the fix almost always belongs in
-the source the test is guarding.
+These checks cover behaviors that are easy to lose during a broad refactor.
+Invariants 11-14 preserve four especially important compatibility and routing
+rules. Every test is meant to fail loudly when one of those rules disappears;
+read the docstring on a failing test before changing this file, because the fix
+almost always belongs in the source the test is guarding.
 """
 
 from __future__ import annotations
@@ -348,8 +343,7 @@ def test_anthropic_identity_is_account_org_pair_not_account_alone():
 # ---------------------------------------------------------------------------
 
 def test_no_duplicate_adr_numbers():
-    """WHY: this exact merge produced a number collision between two ADRs
-    written independently on each side of the fork/upstream split. Two ADRs
+    """WHY: independent ADR additions can produce a number collision. Two ADRs
     sharing a number means one silently shadows the other in any listing or
     reference by number."""
     adr_files = sorted((REPO_ROOT / "docs" / "adr").glob("*.md"))
@@ -390,12 +384,9 @@ def test_model_tier_ids_1m_suffix_only_on_opus_and_sonnet():
 # ---------------------------------------------------------------------------
 
 def test_offline_fallback_labels_1m_prefix_only_on_opus_and_sonnet():
-    """WHY: the fork had 7 such "1M context · " prefixes across the two
-    offline-fallback label dicts (used only when the daemon's live parity
-    fetch fails) and the upstream merge dropped all 7 at once, because the
-    whole literal dict was taken from upstream's side of the conflict. The
-    prefix must survive on exactly the two 1M-context tiers, in both label
-    dicts."""
+    """WHY: the two offline-fallback label dicts (used only when the daemon's
+    live parity fetch fails) must retain their exact 1M-context labels. The
+    prefix must survive on exactly the two 1M-context tiers, in both dicts."""
     for label_dict in (cli._CODEX_MODEL_LABELS, cli._MIXED_MODEL_LABELS):
         for tier in ("OPUS", "SONNET"):
             _name, description = label_dict[tier]
@@ -450,17 +441,16 @@ def test_no_usable_profile_message_says_it_will_not_fix_itself():
     assert "will not fix itself by waiting" in message
 
 def test_api_base_url_accepts_local_http_but_never_public_http():
-    """Upstream v1.3.1 (80db304 "feat(api): local model servers") replaced this
-    fork's https-only rule for Profile base_url with
+    """The local-model support change replaced the repository's https-only rule
+    for Profile base_url with
     net_scope.validate(allow_local_http=kind != "codex"), so a local model
     server can be reached over plain http.
 
-    That relaxation was reviewed and ACCEPTED deliberately on 2026-09-24 — it
-    was not inherited by accident. The fork's previous rule refused even
-    loopback http, reasoning that base_url validates the UPSTREAM target and
+    That relaxation is deliberate. The previous rule refused even loopback
+    http, reasoning that base_url validates the remote target and
     so is a different trust boundary from the daemon's own local listener.
 
-    This test pins where the line now sits, so that a future merge which
+    This test pins where the line now sits, so that a future change which
     widens or narrows it fails here and the change becomes a decision again
     instead of a surprise. A key may cross localhost or a private LAN in the
     clear; it must never cross the public internet that way, and never for a

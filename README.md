@@ -268,7 +268,9 @@ the new installer. On POSIX, `tokenwell install` (which `install.sh` runs) migra
 old path. The service rename happens during `tokenwell install`, not on the first daemon start.
 
 On Windows, Tokenwell keeps reading `~/.claude-unlimited` in place while `~/.tokenwell` does not
-exist. When both directories exist, the new one wins; Tokenwell does not merge them. `cu` and
+exist. When both directories exist, the new one wins only when it contains `config.json` or a
+database. An empty `~/.tokenwell` is removed and the legacy directory is used for migration;
+Tokenwell does not merge populated directories. `cu` and
 `claude-unlimited` continue to work. Installs made with `install.sh` need one reinstall from the
 new URL; editable installs need one `pip install -e .`.
 
@@ -540,8 +542,8 @@ Starts the daemon if it isn't running and launches `claude` routed through your 
 more than one account it asks which to use — or pick **Rotated accounts** to let it manage
 itself.
 
-> **Tip:** `cu` is a shorthand for `tokenwell` — every command works under both names
-> (`cu code`, `cu status`, `cu doctor`, …). An existing install gains `cu` after an update.
+> **Tip:** `cu` and `claude-unlimited` already exist as aliases. The new command names are
+> `tokenwell` and `tw`; every command works under all four names (`tw code`, `cu status`, …).
 
 ```bash
 tokenwell code --profile "Personal Max"   # pin this session to one account

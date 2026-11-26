@@ -51,9 +51,8 @@ automatically from that tag.
    `git push --follow-tags` only sends annotated tags, so it would push `main`,
    skip the tag, and the release workflow would never start.
 
-   (The examples above use upstream's plain `0.2.0`. On this fork, tags are
-   four-part — see "On this fork" under Versioning — so a real fork release
-   looks like `v1.2.7.1`.)
+   The repository uses four-part release versions when a release extends an
+   existing three-part version, so a release may also look like `v1.2.7.1`.
 
 That's it. `.github/workflows/release.yml` then:
 
@@ -131,20 +130,12 @@ says so plainly in the commit subject so it reaches the notes.
 
 Tags are always `v`-prefixed (`v0.2.0`); `__version__` never is (`0.2.0`).
 
-### On this fork
+### Four-part releases
 
-This fork also fetches upstream's tags, so a fork release is a **four-part**
-version: `<upstream three-part>.<fork counter>`. `v1.2.7.1` is upstream
-`1.2.7` plus this fork's first release on top of it.
-
-The reason is collision, not preference: naming a fork tag like a future
-upstream tag (say, `v1.2.8`) would make `git fetch upstream` refuse to
-clobber it once upstream actually cuts that version, and it would misstate
-which upstream commit the fork's code is based on.
-
-After merging an upstream release `X.Y.Z`, the fork's next tag is `vX.Y.Z.1`
-(and `vX.Y.Z.2` for the release after that, if no new upstream merge lands in
-between). `parse_version`'s tuple comparison keeps this monotonic without any
+When a release extends an existing three-part version, the fourth component is
+an incrementing release counter: `<base three-part>.<release counter>`.
+`v1.2.7.1` is the first such release after `1.2.7`; a later release may use
+`v1.2.7.2`. `parse_version` compares these tuples monotonically without
 special-casing: `(1, 2, 7, 1) > (1, 2, 7)` and `(1, 2, 8) > (1, 2, 7, 1)`.
 
 ## How the updater consumes a release
