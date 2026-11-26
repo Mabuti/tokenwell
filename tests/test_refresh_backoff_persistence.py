@@ -11,9 +11,9 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-from claude_unlimited.config import Pool, Profile, load_pool, save_pool
-from claude_unlimited.gateway import Gateway
+import tokenwell.gateway as gateway_module
+from tokenwell.config import Pool, Profile, load_pool, save_pool
+from tokenwell.gateway import Gateway
 
 
 class _FakeSecretStore:
@@ -23,11 +23,11 @@ class _FakeSecretStore:
 
 @pytest.fixture
 def env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE",
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE",
                         tmp_path / "runtime_state.json")
     monkeypatch.setattr(gateway_module, "secret_store", _FakeSecretStore())
     # Isolate these tests from the refresh machinery: we exercise backoff

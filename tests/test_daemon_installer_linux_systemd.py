@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from claude_unlimited.daemon_installer import linux_systemd as backend
+from tokenwell.daemon_installer import linux_systemd as backend
 
 
 def _ok(stdout="", returncode=0):
@@ -32,7 +32,7 @@ def test_install_writes_unit_file_enables_and_restarts():
 
     assert backend.UNIT_PATH.exists()
     contents = backend.UNIT_PATH.read_text()
-    assert "claude_unlimited start --port 4317" in contents
+    assert "tokenwell start --port 4317" in contents
     assert "[Install]" in contents
     # The crash-loop protection must be present, or a fast-failing daemon gets
     # permanently disabled by systemd's default start limit.

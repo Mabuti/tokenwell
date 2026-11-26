@@ -9,10 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from claude_unlimited import gateway, router, runtime_state
-from claude_unlimited.config import Pool, Profile, Settings, save_pool
-from claude_unlimited.observation import QuotaExhausted, ShortRateLimit, UsageSnapshot
-from claude_unlimited.upstream import UpstreamResponse
+from tokenwell import gateway, router, runtime_state
+from tokenwell.config import Pool, Profile, Settings, save_pool
+from tokenwell.observation import QuotaExhausted, ShortRateLimit, UsageSnapshot
+from tokenwell.upstream import UpstreamResponse
 
 
 NOW = datetime(2026, 11, 16, tzinfo=timezone.utc)
@@ -646,7 +646,7 @@ def _parity_source(path):
 @pytest.fixture
 def main_router():
     source = _parity_source("claude_unlimited/router.py")
-    module = types.ModuleType("claude_unlimited._main_router_parity")
+    module = types.ModuleType("tokenwell._main_router_parity")
     with pytest.MonkeyPatch.context() as patch:
         patch.setitem(sys.modules, module.__name__, module)
         exec(compile(
@@ -658,11 +658,11 @@ def main_router():
 @pytest.fixture
 def main_gateway(main_router):
     source = _parity_source("claude_unlimited/gateway.py")
-    module = types.ModuleType("claude_unlimited._main_gateway_parity")
+    module = types.ModuleType("tokenwell._main_gateway_parity")
     with pytest.MonkeyPatch.context() as patch:
         patch.setitem(sys.modules, module.__name__, module)
         with pytest.MonkeyPatch.context() as imports:
-            imports.setitem(sys.modules, "claude_unlimited.router", main_router)
+            imports.setitem(sys.modules, "tokenwell.router", main_router)
             exec(compile(
                 source, f"{PARITY_REFERENCE_COMMIT}:claude_unlimited/gateway.py", "exec"),
                 module.__dict__,
@@ -1075,7 +1075,7 @@ def test_same_day_exhaustion_sentence_matches_main(
 
     assert current.error == reference.error == "all_profiles_exhausted"
     assert current.headers == reference.headers
-    assert current.error_detail.encode() == reference.error_detail.encode()
+    assert current.error_detail.encode() == reference.error_detail.replace("Claude Unlimited", "Tokenwell").encode()
 
 
 @pytest.mark.parametrize("days_away, reset_format", [
@@ -1165,4 +1165,4 @@ def test_other_profile_exhausted_release_and_sentence_match_main(
             f"{weekly_reset.astimezone():%H:%M on %A}."
         )
     else:
-        assert current_response.error_detail == reference_response.error_detail
+        assert current_response.error_detail == reference_response.error_detail.replace("Claude Unlimited", "Tokenwell")

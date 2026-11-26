@@ -9,7 +9,7 @@ pass whether or not that code exists yet.
 import json
 import re
 
-import claude_unlimited.daemon as daemon
+import tokenwell.daemon as daemon
 
 _INDEX_HTML = (daemon._STATIC_DIR / "index.html").read_text(encoding="utf-8")
 _APP_JS = (daemon._STATIC_DIR / "app.js").read_text(encoding="utf-8")

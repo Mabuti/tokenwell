@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta, timezone
 
-from claude_unlimited.observation import (
+from tokenwell.observation import (
     AuthInvalid,
     ProviderUnavailable,
     QuotaExhausted,
     ShortRateLimit,
     UsageSnapshot,
 )
-from claude_unlimited.router import (
+from tokenwell.router import (
     PoolSnapshot,
     ProfileRuntime,
     ProfileState,
@@ -261,7 +261,7 @@ def test_recover_expired_exhausted_clears_usage_percent():
 
 def _rt_with_fable(pid, priority, percent, *, threshold=98.0, resets_at=None,
                    state=None, leave=True):
-    from claude_unlimited.observation import ModelWindow
+    from tokenwell.observation import ModelWindow
 
     rt = ProfileRuntime(profile_id=pid, priority=priority, switch_threshold=threshold,
                         automatic=True, state=state or ProfileState.ELIGIBLE,
@@ -281,7 +281,7 @@ def test_fable_spent_reads_the_fable_window_only():
     # Not a state change: the account itself is fine.
     assert spent.state == ProfileState.ELIGIBLE
 
-    from claude_unlimited.observation import ModelWindow
+    from tokenwell.observation import ModelWindow
     other = ProfileRuntime(profile_id="b", priority=1, switch_threshold=98.0, automatic=True)
     other.model_usage = (ModelWindow(name="Opus", percent=100.0, resets_at=LATER),)
     assert fable_spent(other, NOW_) is False, "a different model's bucket is not Fable"
@@ -384,7 +384,7 @@ def test_with_no_alternative_the_session_stays_and_is_served_anyway():
 
 def test_a_spent_account_becomes_a_candidate_again_when_its_bucket_shows_room():
     """Nothing is written into `state`, so a fresh usage read is all it takes."""
-    from claude_unlimited.observation import ModelWindow, UsageSnapshot
+    from tokenwell.observation import ModelWindow, UsageSnapshot
 
     a = _rt_with_fable("a", 1, 100.0, resets_at=LATER)
     b = _rt_with_fable("b", 2, 10.0, resets_at=LATER)

@@ -5,15 +5,15 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.notifications as notifications
+import tokenwell.daemon as daemon
+import tokenwell.notifications as notifications
 
 
 @pytest.fixture
 def running_server(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
 
     server = daemon.make_server(host="127.0.0.1", port=0)
     port = server.server_address[1]

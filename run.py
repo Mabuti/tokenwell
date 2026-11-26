@@ -1,3 +1,3 @@
 #!/usr/bin/env python3
-from claude_unlimited.cli import main
+from tokenwell.cli import main
 raise SystemExit(main())

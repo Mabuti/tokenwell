@@ -6,11 +6,11 @@ The gateway runs for real; only the upstream transport is faked."""
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.gateway as gateway_module
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.daemon as daemon
+import tokenwell.gateway as gateway_module
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.upstream import UpstreamResponse
 
 USAGE_HEADERS = {"anthropic-ratelimit-unified-5h-utilization": "0.1",
                  "anthropic-ratelimit-unified-5h-reset": "1787191800",
@@ -32,7 +32,7 @@ class FakeSecretStore:
 
 @pytest.fixture
 def gateway(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore())
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
     connections = []

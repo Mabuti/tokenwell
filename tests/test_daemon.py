@@ -3,7 +3,7 @@ import urllib.request
 
 import pytest
 
-from claude_unlimited.daemon import make_server
+from tokenwell.daemon import make_server
 
 
 def test_refuses_to_bind_non_loopback_host():
@@ -68,9 +68,9 @@ def test_an_immediate_auto_install_restarts_on_the_running_port(monkeypatch):
     """An auto_install that lands while the pool is idle must restart so the new
     code actually runs — and onto the port the daemon is really serving, not a
     hardcoded DEFAULT_PORT. Previously only the deferred path restarted."""
-    from claude_unlimited import daemon
-    from claude_unlimited import updater
-    from claude_unlimited.config import Settings
+    from tokenwell import daemon
+    from tokenwell import updater
+    from tokenwell.config import Settings
 
     monkeypatch.setattr(daemon, "_RUNNING_PORT", 4399)
     monkeypatch.setattr(daemon._gateway, "is_idle", lambda *_a, **_k: True)
@@ -87,9 +87,9 @@ def test_an_immediate_auto_install_restarts_on_the_running_port(monkeypatch):
 
 
 def test_a_manual_check_never_installs_or_restarts(monkeypatch):
-    from claude_unlimited import daemon
-    from claude_unlimited import updater
-    from claude_unlimited.config import Settings
+    from tokenwell import daemon
+    from tokenwell import updater
+    from tokenwell.config import Settings
 
     monkeypatch.setattr(updater, "run_update_cycle",
                         lambda *a, **k: updater.UpdateOutcome(

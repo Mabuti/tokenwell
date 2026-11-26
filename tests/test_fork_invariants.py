@@ -21,15 +21,15 @@ from pathlib import Path
 
 import pytest
 
-import claude_unlimited.cli as cli
-import claude_unlimited.config as config
-import claude_unlimited.daemon as daemon
-import claude_unlimited.export_import as ei
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.profiles as profile_repo
-import claude_unlimited.router as router
-from claude_unlimited.config import Pool, Profile, Settings, load_pool, save_pool
-from claude_unlimited.gateway import GatewayResult
+import tokenwell.cli as cli
+import tokenwell.config as config
+import tokenwell.daemon as daemon
+import tokenwell.export_import as ei
+import tokenwell.gateway as gateway_module
+import tokenwell.profiles as profile_repo
+import tokenwell.router as router
+from tokenwell.config import Pool, Profile, Settings, load_pool, save_pool
+from tokenwell.gateway import GatewayResult
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -91,7 +91,7 @@ def test_backfill_not_reachable_from_oauth_refresh_loop(monkeypatch):
 
 def test_port_range_constants_and_boundaries():
     """WHY: MIN_PORT/MAX_PORT are the one definition of a usable listen port
-    for --port, CLAUDE_UNLIMITED_PORT, settings.port and POST
+    for --port, TOKENWELL_PORT, settings.port and POST
     /api/settings/port alike (config.py's own comment). If either constant
     drifts, or port_in_range() stops agreeing with them at the edges, some of
     those paths accept a port the others reject."""
@@ -120,9 +120,9 @@ def test_resolve_port_explicit_out_of_range_raises(monkeypatch):
 def test_resolve_port_env_out_of_range_falls_back_to_default(monkeypatch):
     """WHY: the environment is inherited from a service unit or shell
     profile a user does not watch for error messages, so an out-of-range
-    CLAUDE_UNLIMITED_PORT must fall back to the default rather than refuse to
+    TOKENWELL_PORT must fall back to the default rather than refuse to
     start something that was working yesterday."""
-    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", "70000")
+    monkeypatch.setenv("TOKENWELL_PORT", "70000")
     assert config.resolve_port(None) == config._default_port()
 
 
@@ -131,7 +131,7 @@ def test_resolve_port_settings_out_of_range_falls_back_to_default(monkeypatch):
     (run_foreground's own bind-failure message says so). A hand-edited
     out-of-range settings.port must fall back to the default, the same
     treatment as a bad env var, rather than crash the daemon on startup."""
-    monkeypatch.delenv("CLAUDE_UNLIMITED_PORT", raising=False)
+    monkeypatch.delenv("TOKENWELL_PORT", raising=False)
     config.ensure_app_dir()
     config.CONFIG_FILE.write_text(json.dumps({"profiles": [], "settings": {"port": 99999}}))
     assert config.resolve_port(None) == config._default_port()
@@ -200,7 +200,7 @@ def test_routing_decision_reason_comment_is_complete():
 # ---------------------------------------------------------------------------
 
 def _load_locale(code: str) -> dict:
-    return json.loads((REPO_ROOT / "claude_unlimited" / "locales" / f"{code}.json").read_text())
+    return json.loads((REPO_ROOT / "tokenwell" / "locales" / f"{code}.json").read_text())
 
 
 def _flatten_keys(d: dict, prefix: str = "") -> set:
@@ -215,7 +215,7 @@ def _flatten_keys(d: dict, prefix: str = "") -> set:
 
 
 def _port_error_locale_keys() -> dict:
-    app_js = (REPO_ROOT / "claude_unlimited" / "static" / "app.js").read_text()
+    app_js = (REPO_ROOT / "tokenwell" / "static" / "app.js").read_text()
     match = re.search(r"const PORT_ERROR_LOCALE_KEYS\s*=\s*\{(.*?)\};", app_js, re.DOTALL)
     assert match, "PORT_ERROR_LOCALE_KEYS not found in static/app.js"
     body = match.group(1)
@@ -466,7 +466,7 @@ def test_api_base_url_accepts_local_http_but_never_public_http():
     clear; it must never cross the public internet that way, and never for a
     Codex profile, whose bridge speaks https only.
     """
-    from claude_unlimited import profiles
+    from tokenwell import profiles
 
     for ok in ("https://api.anthropic.com",
                "https://example.com/v1",

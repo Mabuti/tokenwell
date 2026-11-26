@@ -7,13 +7,13 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.usage_probe as usage_probe
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.observation import ModelWindow, UsageSnapshot
-from claude_unlimited.router import PoolSnapshot, ProfileRuntime, observe
+import tokenwell.daemon as daemon
+import tokenwell.gateway as gateway_module
+import tokenwell.usage_probe as usage_probe
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.observation import ModelWindow, UsageSnapshot
+from tokenwell.router import PoolSnapshot, ProfileRuntime, observe
 
 NOW = datetime(2026, 9, 16, 12, 0, tzinfo=timezone.utc)
 
@@ -93,9 +93,9 @@ def test_a_spent_model_window_does_not_change_the_accounts_state():
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
     return tmp_path
 
 
@@ -150,7 +150,7 @@ def test_the_per_tick_runtime_rebuild_keeps_the_windows(pool_env):
 def test_a_naive_persisted_reset_time_never_breaks_startup(pool_env):
     # Compared with an aware `now` at startup; a naive value used to be a
     # TypeError there. Treated as UTC, which is what we always write.
-    from claude_unlimited.gateway import _restorable_usage_fields
+    from tokenwell.gateway import _restorable_usage_fields
     future_naive = (datetime.now(timezone.utc) + timedelta(days=2)).replace(tzinfo=None).isoformat()
     fields = _restorable_usage_fields(
         {"model_usage": [{"name": "Fable", "percent": 26, "resets_at": future_naive}]},
@@ -160,7 +160,7 @@ def test_a_naive_persisted_reset_time_never_breaks_startup(pool_env):
 
 
 def test_last_use_is_the_latest_by_time_not_by_insertion_order():
-    from claude_unlimited.usage_history import UsageEvent, last_use_by_profile
+    from tokenwell.usage_history import UsageEvent, last_use_by_profile
     def ev(ts, model):
         return UsageEvent(timestamp=ts, profile_id="a", project_id=None, model=model, input_tokens=1,
                           output_tokens=0, cache_creation_input_tokens=0, cache_read_input_tokens=0, cost_usd=None)

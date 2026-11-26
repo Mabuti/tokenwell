@@ -9,9 +9,9 @@ import pytest
 
 
 def _run_editor(checks):
-    markup = (Path(__file__).parents[1] / "claude_unlimited/static/index.html").read_text()
+    markup = (Path(__file__).parents[1] / "tokenwell/static/index.html").read_text()
     assert re.search(r'<button\b(?=[^>]*\btype="button")(?=[^>]*\bid="parityAddBtn")[^>]*>', markup)
-    source = (Path(__file__).parents[1] / "claude_unlimited/static/app.js").read_text()
+    source = (Path(__file__).parents[1] / "tokenwell/static/app.js").read_text()
     start = source.index("let _parityRows =")
     end = source.index("async function resetModelParity()", start)
     # Include Reset's function body, ending before the next section.
@@ -85,7 +85,7 @@ const api = async (path, options) => {
     lang_start = source.index("async function setLanguage(")
     lang_end = source.index("\n}\n", lang_start) + 3
     locales = {p.stem: json.loads(p.read_text()) for p in
-               (Path(__file__).parents[1] / "claude_unlimited/locales").glob("*.json")}
+               (Path(__file__).parents[1] / "tokenwell/locales").glob("*.json")}
     harness += "\nconst locales = " + json.dumps(locales) + ";\n"
     result = subprocess.run(["node", "-"], input=harness + source[lang_start:lang_end] + source[start:end] + checks,
                             text=True, capture_output=True)

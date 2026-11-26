@@ -6,8 +6,8 @@ is asserted somewhere.
 """
 import pytest
 
-from claude_unlimited import wire_formats as wf
-from claude_unlimited.openai_translate import ResponseTranslator, anthropic_request_to_openai
+from tokenwell import wire_formats as wf
+from tokenwell.openai_translate import ResponseTranslator, anthropic_request_to_openai
 
 
 def test_an_unrecorded_format_keeps_the_pre_existing_behaviour():

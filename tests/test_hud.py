@@ -10,7 +10,7 @@ import plistlib
 
 import pytest
 
-from claude_unlimited import hud
+from tokenwell import hud
 
 
 # --------------------------------------------------------------------------
@@ -411,5 +411,5 @@ def test_keep_installed_retries_only_transient_failures():
 
 def test_the_daemon_uses_the_retrying_installer():
     import inspect
-    from claude_unlimited import daemon
+    from tokenwell import daemon
     assert "hud.keep_installed" in inspect.getsource(daemon)

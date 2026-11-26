@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-push freshness check for claude_unlimited/gpt_windows.py.
+"""Pre-push freshness check for tokenwell/gpt_windows.py.
 
 The capacity guard's GPT windows are a HARDCODED table (docs/adr/0009). This
 diffs it against the Codex CLI's own cache of the ChatGPT backend's model
@@ -25,7 +25,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from claude_unlimited import gpt_windows  # noqa: E402
+from tokenwell import gpt_windows  # noqa: E402
 
 CACHE = os.path.join(os.path.expanduser(os.environ.get("CODEX_HOME", "~/.codex")), "models_cache.json")
 
@@ -87,7 +87,7 @@ def main() -> int:
             problems.append(f"  {alias}: cap {cap} exceeds listed {real_slug} context_window {context_window}")
 
     if problems:
-        print(f"check_gpt_windows: claude_unlimited/gpt_windows.py is OUT OF SYNC with {CACHE} "
+        print(f"check_gpt_windows: tokenwell/gpt_windows.py is OUT OF SYNC with {CACHE} "
               f"(fetched {fetched}):")
         print("\n".join(problems))
         print("Update the table (and its source/date comments), then re-run. Changing a row is a "

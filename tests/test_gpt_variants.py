@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from claude_unlimited.config import Profile
-from claude_unlimited.openai_bridge import run
-from claude_unlimited.openai_credential import StoredOpenAICredential, encode
-import claude_unlimited.openai_bridge as bridge_module
+from tokenwell.config import Profile
+from tokenwell.openai_bridge import run
+from tokenwell.openai_credential import StoredOpenAICredential, encode
+import tokenwell.openai_bridge as bridge_module
 
 
 class _Response:

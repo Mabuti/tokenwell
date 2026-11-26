@@ -3,15 +3,15 @@ import re
 
 import pytest
 
-from claude_unlimited import daemon
-from claude_unlimited.config import Pool, Profile
-from claude_unlimited.gateway import (
+from tokenwell import daemon
+from tokenwell.config import Pool, Profile
+from tokenwell.gateway import (
     _capacity_exhaustion,
     _pool_retry_after_seconds,
     _restorable_usage_fields,
 )
-from claude_unlimited.observation import UsageSnapshot
-from claude_unlimited.router import (
+from tokenwell.observation import UsageSnapshot
+from tokenwell.router import (
     PoolSnapshot,
     ProfileRuntime,
     ProfileState,

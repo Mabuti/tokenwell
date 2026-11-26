@@ -11,8 +11,8 @@ import time
 
 import pytest
 
-import claude_unlimited.config as config
-import claude_unlimited.model_catalogue as mc
+import tokenwell.config as config
+import tokenwell.model_catalogue as mc
 
 TODAY = datetime.date(2026, 9, 7)
 

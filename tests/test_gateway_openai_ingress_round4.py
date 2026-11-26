@@ -13,15 +13,15 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.openai_bridge as bridge_module
-from claude_unlimited import placeholder_token, usage_tracking
-from claude_unlimited.config import Pool, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.observation import QuotaExhausted, ShortRateLimit, UsageSnapshot
-from claude_unlimited.openai_bridge import OpenAIBridgeResult
-from claude_unlimited.openai_observation import classify, parse_credits
-from claude_unlimited.router import ProfileState
+import tokenwell.gateway as gateway_module
+import tokenwell.openai_bridge as bridge_module
+from tokenwell import placeholder_token, usage_tracking
+from tokenwell.config import Pool, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.observation import QuotaExhausted, ShortRateLimit, UsageSnapshot
+from tokenwell.openai_bridge import OpenAIBridgeResult
+from tokenwell.openai_observation import classify, parse_credits
+from tokenwell.router import ProfileState
 
 from test_gateway_openai_ingress import (  # noqa: F401 - pool_env is a fixture
     BODY, MOVE_BODY, SSE, FakeHTTPResponse, FakeSecretStore, Upstream, _codex, _codex_cred, _drain, _in,

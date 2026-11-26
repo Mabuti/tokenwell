@@ -1,4 +1,4 @@
-"""`claude-unlimited desktop` — configure the Claude desktop app to use the pool.
+"""`tokenwell desktop` — configure the Claude desktop app to use the pool.
 
 The app calls this third-party ("3p") inference mode. It runs from a SEPARATE
 userData directory with its own settings and bundled Claude Code, which is why
@@ -9,7 +9,7 @@ it by hand through Developer > Configure Third-Party Inference.
 """
 import json
 
-import claude_unlimited.cli as cli
+import tokenwell.cli as cli
 
 
 def _dirs(monkeypatch, tmp_path):
@@ -173,7 +173,7 @@ def test_it_refuses_if_the_app_will_not_quit(monkeypatch, tmp_path, capsys):
 
 # --- purge must undo what `desktop` did ------------------------------------
 #
-# purge deletes ~/.claude-unlimited, which is where the pre-change snapshot
+# purge deletes ~/.tokenwell, which is where the pre-change snapshot
 # lives. Without an explicit revert first, purge would leave the desktop app
 # pointed at a gateway that no longer exists AND destroy the only copy of the
 # settings that could bring it back.
@@ -191,7 +191,7 @@ def test_purge_restores_the_desktop_config_before_deleting_the_backup(monkeypatc
     _seed_backup(tmp_path, '{"original": true}\n')
     three_p = tmp_path / "Claude-3p"
     three_p.mkdir(parents=True, exist_ok=True)
-    (three_p / "claude_desktop_config.json").write_text('{"pointed_at": "claude-unlimited"}\n')
+    (three_p / "claude_desktop_config.json").write_text('{"pointed_at": "tokenwell"}\n')
     monkeypatch.setattr(cli, "_desktop_app_running", lambda: False)
 
     cli._revert_desktop_config_for_purge()
@@ -204,7 +204,7 @@ def test_purge_preserves_the_backup_when_the_app_will_not_quit(monkeypatch, tmp_
     _seed_backup(tmp_path, '{"original": true}\n')
     monkeypatch.setattr(cli, "_desktop_app_running", lambda: True)
     monkeypatch.setattr(cli, "_quit_desktop_app", lambda timeout=20.0: False)
-    keep = tmp_path / "home" / "claude-unlimited-desktop-backup"
+    keep = tmp_path / "home" / "tokenwell-desktop-backup"
     monkeypatch.setattr(cli.Path, "home", classmethod(lambda cls: tmp_path / "home"))
     (tmp_path / "home").mkdir()
 

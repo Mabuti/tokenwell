@@ -1,6 +1,6 @@
 import pytest
 
-import claude_unlimited.i18n as i18n
+import tokenwell.i18n as i18n
 
 
 def test_list_locales_includes_en_and_es():

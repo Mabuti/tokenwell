@@ -6,11 +6,11 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.profiles as profile_repo
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.daemon as daemon
+import tokenwell.gateway as gateway_module
+import tokenwell.profiles as profile_repo
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.upstream import UpstreamResponse
 
 
 class FakeSecretStore:
@@ -48,11 +48,11 @@ def running_server(monkeypatch, tmp_path):
     store = FakeSecretStore()
     monkeypatch.setattr(profile_repo, "secret_store", store)
     monkeypatch.setattr(gateway_module, "secret_store", store)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
 
     # make_server() rebuilds daemon._gateway fresh on every call, so it must
     # run AFTER the monkeypatches above to pick up the isolated runtime_state

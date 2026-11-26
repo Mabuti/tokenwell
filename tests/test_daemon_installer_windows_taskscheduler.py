@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from claude_unlimited.daemon_installer import windows_taskscheduler as backend
+from tokenwell.daemon_installer import windows_taskscheduler as backend
 
 
 def _ok(stdout="", returncode=0):
@@ -44,7 +44,8 @@ def test_install_creates_task_and_starts_it():
          patch.object(backend, "_detached_restart") as mock_restart:
         backend.install(4317)
 
-    create_call = calls[0]
+    assert ("schtasks", "/delete", "/tn", backend.LEGACY_TASK_NAME, "/f") in calls
+    create_call = next(call for call in calls if len(call) > 1 and call[1] == "/create")
     assert create_call[:3] == ("schtasks", "/create", "/tn")
     assert backend.TASK_NAME in create_call
     # /tr points at a generated wrapper script rather than embedding the
@@ -56,7 +57,7 @@ def test_install_creates_task_and_starts_it():
     wrapper = backend.Path(tr_value.strip('"'))
     assert wrapper.name == "daemon_launcher.cmd"
     content = wrapper.read_text(encoding="ascii")
-    assert "claude_unlimited start --port 4317" in content
+    assert "tokenwell start --port 4317" in content
     assert " -u " in content  # unbuffered — see the buffering half of the same bug
     assert ">>" in content and "daemon.out.log" in content and "daemon.err.log" in content
     mock_restart.assert_called_once()

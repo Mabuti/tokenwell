@@ -14,7 +14,7 @@ import pytest
 def test_stop_signals_never_reference_a_missing_signal():
     """`signal.SIGKILL` is Unix-only; even naming it in a tuple raises
     AttributeError on Windows. The ladder must be built by presence."""
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     assert signal.SIGTERM in cli._STOP_SIGNALS
     # Whatever is in the list must actually exist as a signal on this platform.
@@ -33,7 +33,7 @@ def test_secret_store_names_the_backend_it_loaded():
     reports its own name so the diagnostic tells the truth per platform."""
     import platform
 
-    from claude_unlimited import secret_store
+    from tokenwell import secret_store
 
     assert secret_store.BACKEND_NAME
     expected = {"Darwin": "macOS Keychain", "Linux": "Linux Secret Service (libsecret)",
@@ -45,7 +45,7 @@ def test_notification_dispatch_fires_on_every_platform(monkeypatch):
     """The "test notification" button called only the macOS sender and then
     reported success — a silent no-op on Linux/Windows. `send()` must invoke
     all three platform senders (each self-guards to exactly one)."""
-    from claude_unlimited import notifications
+    from tokenwell import notifications
 
     called = []
     monkeypatch.setattr(notifications, "send_macos_notification", lambda t, m: called.append("macos"))
@@ -59,8 +59,8 @@ def test_notification_dispatch_fires_on_every_platform(monkeypatch):
 def test_notify_if_enabled_routes_through_send(monkeypatch):
     """Regression: the settings-gated path must use the same dispatch, so a
     real rotation notification is not macOS-only either."""
-    from claude_unlimited import notifications
-    from claude_unlimited.config import Settings
+    from tokenwell import notifications
+    from tokenwell.config import Settings
 
     fired = []
     monkeypatch.setattr(notifications, "send", lambda t, m: fired.append((t, m)))
@@ -78,7 +78,7 @@ def test_codex_login_passes_the_full_environment(monkeypatch, tmp_path):
     """A stripped {PATH,HOME} env broke the browser handshake off macOS (no
     DISPLAY/DBUS on Linux, no APPDATA/SystemRoot on Windows). The login must
     inherit the full environment plus the CODEX_HOME override."""
-    import claude_unlimited.cli as cli
+    import tokenwell.cli as cli
 
     monkeypatch.setattr(cli.shutil, "which", lambda name: "/usr/local/bin/codex")
     monkeypatch.setattr(cli, "CODEX_ACCOUNTS_DIR", tmp_path / "codex-accounts")
@@ -108,7 +108,7 @@ def test_updater_venv_python_matches_the_platform_layout():
     the user to run a bash script."""
     import os
 
-    from claude_unlimited import updater
+    from tokenwell import updater
 
     if os.name == "nt":  # pragma: no cover - only on Windows
         assert updater.VENV_PYTHON.parent.name == "Scripts"
@@ -123,7 +123,7 @@ def test_login_import_error_names_this_platforms_location(monkeypatch):
     Windows and Linux users hunting for something that does not exist there.
     Each platform must describe where ITS login actually lives, and say that
     the CLI has to have been signed in first."""
-    from claude_unlimited import anthropic_oauth
+    from tokenwell import anthropic_oauth
 
     seen = {}
     for system, expected in (("Darwin", "Keychain"), ("Windows", ".credentials.json"),
@@ -145,7 +145,7 @@ def test_login_import_error_names_a_cli_that_actually_exists(monkeypatch, tmp_pa
     """"Run `claude`" is a dead end for desktop-app users: the app ships its own
     copy of the CLI inside its userData directory and puts nothing on PATH. The
     message must name the bundled binary, newest version first."""
-    from claude_unlimited import anthropic_oauth
+    from tokenwell import anthropic_oauth
 
     monkeypatch.setattr(anthropic_oauth.platform, "system", lambda: "Windows")
     monkeypatch.setattr(anthropic_oauth.shutil, "which", lambda _name: None)
@@ -169,7 +169,7 @@ def test_login_import_error_names_a_cli_that_actually_exists(monkeypatch, tmp_pa
 
 def test_login_import_error_prefers_a_cli_on_path(monkeypatch):
     """When `claude` IS on PATH, keep the short instruction."""
-    from claude_unlimited import anthropic_oauth
+    from tokenwell import anthropic_oauth
 
     monkeypatch.setattr(anthropic_oauth.shutil, "which", lambda _name: "/usr/local/bin/claude")
     assert anthropic_oauth.claude_cli_command() == "claude"
@@ -180,7 +180,7 @@ def test_login_import_error_finds_a_natively_installed_cli(monkeypatch, tmp_path
     """Claude Code's own installer writes to ~/.local/bin and updates PATH, but a
     terminal opened before that still cannot resolve `claude` - so a real install
     must be found there before falling back to the desktop app's older bundle."""
-    from claude_unlimited import anthropic_oauth
+    from tokenwell import anthropic_oauth
 
     monkeypatch.setattr(anthropic_oauth.platform, "system", lambda: "Windows")
     monkeypatch.setattr(anthropic_oauth.shutil, "which", lambda _name: None)

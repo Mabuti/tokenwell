@@ -18,8 +18,8 @@ import json
 import re
 from html.parser import HTMLParser
 
-import claude_unlimited.cli as cli
-import claude_unlimited.daemon as daemon
+import tokenwell.cli as cli
+import tokenwell.daemon as daemon
 
 _INDEX_HTML = (daemon._STATIC_DIR / "index.html").read_text(encoding="utf-8")
 _EN = json.loads((daemon._STATIC_DIR.parent / "locales" / "en.json").read_text(encoding="utf-8"))

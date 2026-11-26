@@ -15,9 +15,9 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 
-import claude_unlimited.cli as cli
-import claude_unlimited.daemon_installer as daemon_installer
-import claude_unlimited.tls_trust as tls_trust
+import tokenwell.cli as cli
+import tokenwell.daemon_installer as daemon_installer
+import tokenwell.tls_trust as tls_trust
 
 
 def _ca_pem() -> bytes:
@@ -279,8 +279,8 @@ def test_main_sets_up_trust_before_anything_else(monkeypatch):
 
 @pytest.fixture
 def doctor_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     monkeypatch.setattr(cli.updater, "ensure_cli_aliases", lambda *a, **kw: None)
     monkeypatch.setattr(daemon_installer, "status",
                         lambda: {"installed": True, "running": True, "pid": 1})

@@ -23,11 +23,11 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.anthropic_oauth as anthropic_oauth
-import claude_unlimited.cli as cli
-import claude_unlimited.daemon as daemon
-import claude_unlimited.oauth_credential as oauth_credential
-import claude_unlimited.profiles as profile_repo
+import tokenwell.anthropic_oauth as anthropic_oauth
+import tokenwell.cli as cli
+import tokenwell.daemon as daemon
+import tokenwell.oauth_credential as oauth_credential
+import tokenwell.profiles as profile_repo
 
 
 class FakeSecretStore:
@@ -51,10 +51,10 @@ class FakeSecretStore:
 def env(monkeypatch, tmp_path):
     store = FakeSecretStore()
     monkeypatch.setattr(profile_repo, "secret_store", store)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     return store
 
 

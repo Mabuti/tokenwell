@@ -1,4 +1,4 @@
-"""`claude-unlimited codex` / `cu codex`: launches the real Codex CLI with its
+"""`tokenwell codex` / `cu codex`: launches the real Codex CLI with its
 model provider pointed at this daemon, so Codex sessions are served by the
 pool's codex-kind (ChatGPT/Codex) accounts.
 
@@ -10,8 +10,8 @@ import types
 
 import pytest
 
-import claude_unlimited.cli as cli
-from claude_unlimited.config import Pool, Profile, Settings, save_pool
+import tokenwell.cli as cli
+from tokenwell.config import Pool, Profile, Settings, save_pool
 
 
 def _codex_profile(pid="c", name="ChatGPT", **kw):
@@ -28,9 +28,9 @@ def codex_env(monkeypatch, tmp_path):
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(cli, "_ensure_daemon", lambda port: True)
     # Isolate load_pool()/save_pool() (used by both cli.py and config.launch_argv)
-    # to a throwaway directory -- never the real ~/.claude-unlimited config.
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    # to a throwaway directory -- never the real ~/.tokenwell config.
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     # load_pool()'s own Path.home() fallback (for shared_claude_dir) would
     # otherwise try to build a WindowsPath on a POSIX runner the moment a
     # test monkeypatches os.name to "nt" -- a pre-existing pathlib quirk
@@ -74,17 +74,17 @@ def test_full_argv_order_pinned_profile(monkeypatch, codex_env):
 
     expected = [
         "codex",
-        "-c", 'model_provider="claude_unlimited"',
-        "-c", 'model_providers.claude_unlimited.name="Claude Unlimited"',
-        "-c", 'model_providers.claude_unlimited.base_url="http://127.0.0.1:4317/v1"',
-        "-c", 'model_providers.claude_unlimited.wire_api="responses"',
-        "-c", 'model_providers.claude_unlimited.env_key="CLAUDE_UNLIMITED_TOKEN"',
-        "-c", "model_providers.claude_unlimited.requires_openai_auth=false",
-        "-c", "model_providers.claude_unlimited.supports_websockets=false",
+        "-c", 'model_provider="tokenwell"',
+        "-c", 'model_providers.tokenwell.name="Tokenwell"',
+        "-c", 'model_providers.tokenwell.base_url="http://127.0.0.1:4317/v1"',
+        "-c", 'model_providers.tokenwell.wire_api="responses"',
+        "-c", 'model_providers.tokenwell.env_key="TOKENWELL_TOKEN"',
+        "-c", "model_providers.tokenwell.requires_openai_auth=false",
+        "-c", "model_providers.tokenwell.supports_websockets=false",
         "exec", "hi",
     ]
     assert argv == expected
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "session-tok-for-c"
+    assert env["TOKENWELL_TOKEN"] == "session-tok-for-c"
 
 
 def test_argv_matches_the_shared_overrides_helper(monkeypatch, codex_env):
@@ -109,7 +109,7 @@ def test_rotating_token_path_uses_the_placeholder_token(monkeypatch, codex_env):
 
     assert cli.codex(4317, [], profile_arg=None) == 0
     (_exe, _argv, env), = codex_env
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "placeholder-tok"
+    assert env["TOKENWELL_TOKEN"] == "placeholder-tok"
 
 
 # ---- refusals ----
@@ -177,7 +177,7 @@ def test_windows_branch_runs_via_run_tool_and_returns_its_code(monkeypatch, code
     assert cli.codex(4317, [], profile_arg=None) == 7
     (_exe, argv, env), = codex_env
     assert argv[0] == "codex"
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "placeholder-tok"
+    assert env["TOKENWELL_TOKEN"] == "placeholder-tok"
 
 
 # ---- configured launcher ----
@@ -220,7 +220,7 @@ def test_codex_no_launcher_args_with_account_still_pins(monkeypatch, codex_env):
     (_exe, argv, env), = codex_env
     assert argv == ["codex", *cli._codex_provider_overrides(4317), "exec", "hi"]
     assert "--extra-flag" not in argv
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "tok-c"
+    assert env["TOKENWELL_TOKEN"] == "tok-c"
 
 
 def test_codex_no_launcher_args_after_command_passes_through_to_codex(monkeypatch, codex_env):
@@ -260,7 +260,7 @@ def test_account_flag_is_parsed_by_argparse_not_passed_through(monkeypatch, code
     assert "--account" not in argv
     assert "ChatGPT" not in argv
     assert argv[-2:] == ["exec", "hi"]
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "tok-c"
+    assert env["TOKENWELL_TOKEN"] == "tok-c"
 
 
 @pytest.mark.parametrize("args", [
@@ -282,7 +282,7 @@ def test_codex_own_profile_flag_passes_through_untouched(monkeypatch, codex_env,
     assert cli.main(["codex", *args]) == 0
     (_exe, argv, env), = codex_env
     assert argv[-len(args):] == args
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "placeholder-tok"
+    assert env["TOKENWELL_TOKEN"] == "placeholder-tok"
 
 
 def test_everything_after_a_double_dash_goes_to_codex_verbatim(monkeypatch, codex_env):
@@ -296,7 +296,7 @@ def test_everything_after_a_double_dash_goes_to_codex_verbatim(monkeypatch, code
     (_exe, argv, env), = codex_env
     overrides = cli._codex_provider_overrides(4317)
     assert argv == ["codex", *overrides, "exec", "--port", "9", "--account", "x", "--", "-p", "fast"]
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "tok-c"
+    assert env["TOKENWELL_TOKEN"] == "tok-c"
 
 
 def test_cu_options_after_a_codex_argument_belong_to_codex(monkeypatch, codex_env):
@@ -313,7 +313,7 @@ def test_cu_options_after_a_codex_argument_belong_to_codex(monkeypatch, codex_en
     (_exe, argv, env), = codex_env
     overrides = cli._codex_provider_overrides(4317)   # the default port, not 9
     assert argv == ["codex", *overrides, "exec", "--port", "9", "--account", "x", "--", "-p", "fast"]
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "placeholder-tok"
+    assert env["TOKENWELL_TOKEN"] == "placeholder-tok"
 
 
 def test_cu_options_in_the_leading_run_are_read_in_every_spelling(monkeypatch, codex_env):
@@ -324,7 +324,7 @@ def test_cu_options_in_the_leading_run_are_read_in_every_spelling(monkeypatch, c
     assert cli.main(["codex", "--port=4318", "--account=ChatGPT", "exec", "--port", "1"]) == 0
     (_exe, argv, env), = codex_env
     assert argv == ["codex", *cli._codex_provider_overrides(4318), "exec", "--port", "1"]
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "tok-c"
+    assert env["TOKENWELL_TOKEN"] == "tok-c"
 
 
 def test_an_unknown_account_names_the_account_flag(monkeypatch, codex_env, capsys):
@@ -408,7 +408,7 @@ def test_picker_with_multiple_codex_profiles_offers_only_codex_profiles(monkeypa
 
     assert cli.codex(4317, [], profile_arg=None) == 0
     (_exe, _argv, env), = codex_env
-    assert env["CLAUDE_UNLIMITED_TOKEN"] == "tok-c1"
+    assert env["TOKENWELL_TOKEN"] == "tok-c1"
 
 
 def test_single_codex_profile_never_prompts(monkeypatch, codex_env):

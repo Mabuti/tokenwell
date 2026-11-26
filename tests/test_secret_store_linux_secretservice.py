@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from claude_unlimited.secret_store import linux_secretservice as backend
+from tokenwell.secret_store import linux_secretservice as backend
 
 
 def _ok(stdout="", returncode=0):
@@ -24,7 +24,7 @@ def test_set_token_calls_secret_tool_store_with_token_on_stdin():
     args, kwargs = mock_run.call_args
     cmd = args[0]
     assert cmd[:2] == ["secret-tool", "store"]
-    assert "service" in cmd and "claude-unlimited.oauth" in cmd
+    assert "service" in cmd and "tokenwell.oauth" in cmd
     assert "account" in cmd and "profile-1" in cmd
     assert kwargs["input"] == "secret-token"
 
@@ -36,7 +36,7 @@ def test_get_token_calls_secret_tool_lookup_and_strips_output():
 
     assert result == "secret-token"
     args = mock_run.call_args.args[0]
-    assert args == ["secret-tool", "lookup", "service", "claude-unlimited.oauth", "account", "profile-1"]
+    assert args == ["secret-tool", "lookup", "service", "tokenwell.oauth", "account", "profile-1"]
 
 
 def test_get_token_raises_when_lookup_fails():
@@ -63,3 +63,37 @@ def test_has_token_false_on_any_failure():
     with patch.object(backend.shutil, "which", return_value="/usr/bin/secret-tool"), \
          patch.object(backend.subprocess, "run", return_value=_ok(returncode=1)):
         assert backend.has_token("profile-1") is False
+
+
+def test_legacy_secret_is_rewritten_verified_and_old_entry_deleted():
+    responses = [
+        _ok(returncode=1),             # new lookup misses
+        _ok(stdout="legacy-token\n"), # old lookup
+        _ok(),                         # store new
+        _ok(stdout="legacy-token\n"), # read-back new
+        _ok(),                         # clear old
+    ]
+    with patch.object(backend.shutil, "which", return_value="/usr/bin/secret-tool"), \
+         patch.object(backend.subprocess, "run", side_effect=responses) as mock_run:
+        assert backend.get_token("profile-1") == "legacy-token"
+    commands = [call.args[0] for call in mock_run.call_args_list]
+    assert commands[0][3] == "tokenwell.oauth"
+    assert commands[1][3] == "claude-unlimited.oauth"
+    assert commands[-1][1] == "clear"
+    assert commands[-1][3] == "claude-unlimited.oauth"
+
+
+def test_failed_legacy_secret_write_keeps_old_entry():
+    responses = [_ok(returncode=1), _ok(stdout="legacy-token\n"), _ok(returncode=1)]
+    with patch.object(backend.shutil, "which", return_value="/usr/bin/secret-tool"), \
+         patch.object(backend.subprocess, "run", side_effect=responses) as mock_run:
+        assert backend.get_token("profile-1") == "legacy-token"
+    assert not any(call.args[0][1] == "clear" for call in mock_run.call_args_list)
+
+
+def test_failed_legacy_secret_verify_keeps_old_entry():
+    responses = [_ok(returncode=1), _ok(stdout="legacy-token\n"), _ok(), _ok(stdout="different\n")]
+    with patch.object(backend.shutil, "which", return_value="/usr/bin/secret-tool"), \
+         patch.object(backend.subprocess, "run", side_effect=responses) as mock_run:
+        assert backend.get_token("profile-1") == "legacy-token"
+    assert not any(call.args[0][1] == "clear" for call in mock_run.call_args_list)

@@ -3,12 +3,12 @@ import json
 
 import pytest
 
-import claude_unlimited.activity as activity
-import claude_unlimited.anthropic_oauth as anthropic_oauth
-import claude_unlimited.export_import as ei
-import claude_unlimited.openai_credential as openai_credential
-import claude_unlimited.profiles as profile_repo
-from claude_unlimited.config import load_pool
+import tokenwell.activity as activity
+import tokenwell.anthropic_oauth as anthropic_oauth
+import tokenwell.export_import as ei
+import tokenwell.openai_credential as openai_credential
+import tokenwell.profiles as profile_repo
+from tokenwell.config import load_pool
 
 
 def _codex_id_token(user_id: str) -> str:
@@ -46,8 +46,8 @@ def env(monkeypatch, tmp_path):
     store = FakeSecretStore()
     monkeypatch.setattr(profile_repo, "secret_store", store)
     monkeypatch.setattr(ei, "secret_store", store)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     monkeypatch.setattr(activity, "APP_DIR", tmp_path)
     monkeypatch.setattr(activity, "ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(ei, "activity_module", activity)
@@ -111,6 +111,16 @@ def test_import_wrong_passphrase_raises_specific_error(env):
                                      passphrase="right-passphrase")
     with pytest.raises(ei.WrongPassphraseError):
         ei.import_bundle(bundle, passphrase="wrong-passphrase")
+
+
+def test_import_old_format_bundle_without_tokenwell_marker(env):
+    old = json.dumps({
+        "bundle_version": 1,
+        "encrypted": False,
+        "data": {"bundle_version": 1, "settings": {"language": "de"}},
+    }).encode()
+    parsed = ei.import_bundle(old)
+    assert parsed.settings == {"language": "de"}
 
 
 def test_import_encrypted_bundle_without_passphrase_raises_clear_error(env):
@@ -779,7 +789,7 @@ def test_importing_settings_does_not_reset_fields_the_bundle_never_carried(env):
     """A bundle exported by a version predating a field simply has no key for
     it. Rebuilding Settings from scratch turned that into "reset it to the
     default", silently changing preferences of whoever imported."""
-    from claude_unlimited.config import update_settings
+    from tokenwell.config import update_settings
 
     update_settings(language="ro", notifications_enabled=False)
     parsed = ei.ParsedBundle(
@@ -798,7 +808,7 @@ def test_export_never_carries_the_launch_commands(env):
     in its environment. It is this machine's choice, like the port, and must
     never leave it in a bundle — including flags like
     --dangerously-skip-permissions that a teammate never agreed to."""
-    from claude_unlimited.config import update_settings
+    from tokenwell.config import update_settings
 
     update_settings(launchers={"claude": "claude --dangerously-skip-permissions"})
     bundle = ei.build_export_bundle(include_profiles=False, include_settings=True, include_activity=False)
@@ -812,7 +822,7 @@ def test_import_ignores_launch_commands_in_a_bundle(env):
     """A bundle written by hand, or by 1.2.7.5 which still exported them, must
     not be able to set what `cu code` runs. Dropped, not rejected, so an
     older bundle still imports its other settings."""
-    from claude_unlimited.config import update_settings
+    from tokenwell.config import update_settings
 
     update_settings(launchers={"claude": "claude"})
     parsed = ei.ParsedBundle(
@@ -883,7 +893,7 @@ def test_leave_on_fable_limit_survives_an_export_import_round_trip(env, monkeypa
 
 
 def test_effort_parity_settings_round_trip(env):
-    from claude_unlimited.config import update_settings
+    from tokenwell.config import update_settings
     rows = [
         {"claude_model": "claude-fable-5-1", "source_effort": "*", "effort": "follow"},
         {"claude_model": "claude-fable-5-1", "source_effort": "max", "model": "gpt-6-astra",
@@ -918,7 +928,7 @@ def test_invalid_settings_import_writes_nothing(env, monkeypatch, settings):
 
 @pytest.mark.parametrize("shape", ["dict", "list"])
 def test_legacy_spellings_export_import_round_trip(env, shape):
-    from claude_unlimited.config import update_settings
+    from tokenwell.config import update_settings
     rows = {"claude-mythos-5-1": {"model": "gpt-6-astra", "effort": "xhigh"},
             "claude-mythos-5-1-20261001": {"model": "gpt-6-luna", "effort": "low"},
             "claude-opus-5-5": {"model": "gpt-6-astra", "effort": "xhigh"},

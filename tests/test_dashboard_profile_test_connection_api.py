@@ -5,10 +5,10 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.connection_test as connection_test
-import claude_unlimited.daemon as daemon
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.connection_test as connection_test
+import tokenwell.daemon as daemon
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.upstream import UpstreamResponse
 
 
 class FakeConnection:
@@ -26,11 +26,11 @@ class FakeSecretStore:
 
 @pytest.fixture
 def running_server(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(connection_test, "secret_store", FakeSecretStore({"a": "tok-a"}))
     # test_connection()'s per-Profile throttle lives in a module-level dict, so
     # it leaks across tests in the same process unless reset here.

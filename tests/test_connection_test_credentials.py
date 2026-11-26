@@ -8,8 +8,8 @@ import json
 
 import pytest
 
-import claude_unlimited.connection_test as ct
-from claude_unlimited.config import Pool, Profile
+import tokenwell.connection_test as ct
+from tokenwell.config import Pool, Profile
 
 
 def test_an_oauth_blob_is_decoded_to_a_bare_token(monkeypatch):

@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
-from claude_unlimited import gpt_windows
-from claude_unlimited.model_catalogue import Catalogue, ModelInfo
-from claude_unlimited.openai_models import (
+from tokenwell import gpt_windows
+from tokenwell.model_catalogue import Catalogue, ModelInfo
+from tokenwell.openai_models import (
     _MODEL_LADDER,
     _MODEL_MAP,
     OpenAIModelTarget,
@@ -140,7 +140,7 @@ def test_the_dashboard_does_not_restate_the_mapping():
     # /api/codex/model-map now; a literal model id back in the page means the
     # duplicate has returned.
     from pathlib import Path
-    static = Path(__file__).resolve().parent.parent / "claude_unlimited" / "static"
+    static = Path(__file__).resolve().parent.parent / "tokenwell" / "static"
     # app.js as well as index.html: the option lists there hardcoded the same
     # ids, which is the same drift bug one file over.
     for filename in ("index.html", "app.js"):
@@ -153,7 +153,7 @@ def test_the_dashboard_does_not_restate_the_mapping():
 
 
 def test_locale_values_do_not_restate_gpt_variant_ids():
-    locales = Path(__file__).resolve().parent.parent / "claude_unlimited" / "locales"
+    locales = Path(__file__).resolve().parent.parent / "tokenwell" / "locales"
     model_ids = set(gpt_windows.CODEX_MODEL_VARIANTS)
     model_ids.update(real_slug for real_slug, _ in gpt_windows.CODEX_MODEL_VARIANTS.values())
     for filename in ("en.json", "de.json", "es.json", "ro.json"):
@@ -231,7 +231,7 @@ def test_the_effort_list_matches_what_the_backend_accepts():
     'max'." `none` returns 0 reasoning tokens — the thing a Codex subscription
     is charged for (ADR 0007). `minimal` is rejected outright, so offering it
     only ever produced a failed request."""
-    from claude_unlimited.openai_models import VALID_REASONING_EFFORTS
+    from tokenwell.openai_models import VALID_REASONING_EFFORTS
     assert "none" in VALID_REASONING_EFFORTS
     assert "minimal" not in VALID_REASONING_EFFORTS
     assert set(VALID_REASONING_EFFORTS) >= {"none", "low", "medium", "high", "xhigh", "max"}
@@ -239,8 +239,8 @@ def test_the_effort_list_matches_what_the_backend_accepts():
 
 def test_none_reaches_the_request_body_as_the_effort():
     import json
-    from claude_unlimited.openai_models import map_model
-    from claude_unlimited.openai_translate import anthropic_request_to_openai
+    from tokenwell.openai_models import map_model
+    from tokenwell.openai_translate import anthropic_request_to_openai
     target = map_model("claude-opus-5", override_reasoning_effort="none")
     assert target.reasoning_effort == "none"
     body = anthropic_request_to_openai({"messages": [], "model": "claude-opus-5"}, target)
@@ -248,5 +248,5 @@ def test_none_reaches_the_request_body_as_the_effort():
 
 
 def test_a_profile_can_be_saved_with_reasoning_off():
-    from claude_unlimited.profiles import _validate_field_types
+    from tokenwell.profiles import _validate_field_types
     _validate_field_types(codex_reasoning_effort="none")

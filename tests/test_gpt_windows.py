@@ -9,8 +9,8 @@ import json
 
 import pytest
 
-import claude_unlimited.gpt_windows as gw
-from claude_unlimited import openai_models
+import tokenwell.gpt_windows as gw
+from tokenwell import openai_models
 
 
 # --- the table's shape -----------------------------------------------------
@@ -218,7 +218,7 @@ def test_the_prompt_too_long_message_is_byte_exact_for_claude_codes_parser():
 # --- the per-profile summary the preview and launch note use -----------------
 
 def test_codex_profile_windows_reports_the_tightest_budget_across_targets():
-    from claude_unlimited.config import Profile
+    from tokenwell.config import Profile
 
     p = Profile(id="c", name="C", kind="codex", auth_mode="chatgpt_subscription")
     summary = openai_models.codex_profile_windows(p, parity=None)
@@ -230,7 +230,7 @@ def test_codex_profile_windows_reports_the_tightest_budget_across_targets():
 
 
 def test_codex_profile_windows_keeps_a_budget_for_each_resolved_model():
-    from claude_unlimited.config import Profile
+    from tokenwell.config import Profile
 
     p = Profile(id="c", name="C", kind="codex", auth_mode="chatgpt_subscription")
     parity = [
@@ -245,7 +245,7 @@ def test_codex_profile_windows_keeps_a_budget_for_each_resolved_model():
 
 
 def test_codex_profile_windows_flags_an_override_it_has_not_met():
-    from claude_unlimited.config import Profile
+    from tokenwell.config import Profile
 
     p = Profile(id="c", name="C", kind="codex", auth_mode="chatgpt_subscription",
                 codex_model="gpt-99-nova")
@@ -254,7 +254,7 @@ def test_codex_profile_windows_flags_an_override_it_has_not_met():
 
 
 def test_codex_profile_windows_survives_a_broken_parity_list():
-    from claude_unlimited.config import Profile
+    from tokenwell.config import Profile
 
     p = Profile(id="c", name="C", kind="codex", auth_mode="chatgpt_subscription")
     summary = openai_models.codex_profile_windows(p, parity=object())

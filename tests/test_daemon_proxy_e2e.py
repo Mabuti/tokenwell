@@ -5,10 +5,10 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-from claude_unlimited import placeholder_token
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.daemon as daemon
+from tokenwell import placeholder_token
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.upstream import UpstreamResponse
 
 
 class FakeConnection:
@@ -34,14 +34,14 @@ def fake_response(status, headers=None, body=b'{"ok":true}'):
 
 @pytest.fixture
 def running_proxy_server(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(placeholder_token, "APP_DIR", tmp_path)
     monkeypatch.setattr(placeholder_token, "TOKEN_FILE", tmp_path / "placeholder_token")
-    monkeypatch.setattr("claude_unlimited.gateway.secret_store", FakeSecretStore({"a": "real-tok"}))
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.gateway.secret_store", FakeSecretStore({"a": "real-tok"}))
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", automatic=True, enabled=True)]))
 
@@ -98,21 +98,21 @@ def test_proxy_request_with_wrong_placeholder_token_is_401(running_proxy_server)
 def test_the_capacity_guards_400_reaches_the_client_in_anthropics_exact_shape(monkeypatch, tmp_path):
     """docs/adr/0009: Claude Code's reactive compaction keys on this envelope
     and this wording — invalid_request_error, "prompt is too long: N tokens >
-    M maximum", no [claude-unlimited] prefix, and never overloaded_error."""
+    M maximum", no [tokenwell] prefix, and never overloaded_error."""
     import threading
-    from claude_unlimited import daemon
+    from tokenwell import daemon
 
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(placeholder_token, "APP_DIR", tmp_path)
     monkeypatch.setattr(placeholder_token, "TOKEN_FILE", tmp_path / "placeholder_token")
-    monkeypatch.setattr("claude_unlimited.gateway.secret_store", FakeSecretStore({"c": "tok"}))
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.gateway.secret_store", FakeSecretStore({"c": "tok"}))
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
     save_pool(Pool(profiles=[Profile(id="c", name="C", kind="codex", auth_mode="chatgpt_subscription",
                                      automatic=True, enabled=True)]))
-    monkeypatch.setattr("claude_unlimited.gateway.openai_bridge.run",
+    monkeypatch.setattr("tokenwell.gateway.openai_bridge.run",
                         lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not reach OpenAI")))
 
     server = daemon.make_server(host="127.0.0.1", port=0)
@@ -135,7 +135,7 @@ def test_the_capacity_guards_400_reaches_the_client_in_anthropics_exact_shape(mo
             assert e.code == 400
             assert e.headers.get("Retry-After") is None
             payload = json.loads(e.read())
-        from claude_unlimited import gpt_windows
+        from tokenwell import gpt_windows
         estimate = gpt_windows.estimate_input_tokens(body, json.loads(body))
         assert payload == {"type": "error",
                            "error": {"type": "invalid_request_error",

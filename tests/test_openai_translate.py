@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from claude_unlimited import openai_translate
-from claude_unlimited.openai_models import OpenAIModelTarget
-from claude_unlimited.openai_translate import ResponseTranslator, anthropic_request_to_openai
+from tokenwell import openai_translate
+from tokenwell.openai_models import OpenAIModelTarget
+from tokenwell.openai_translate import ResponseTranslator, anthropic_request_to_openai
 
 TARGET = OpenAIModelTarget("gpt-5.6-terra", "medium")
 

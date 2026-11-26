@@ -3,8 +3,8 @@ import types
 
 import pytest
 
-import claude_unlimited.cli as cli
-from claude_unlimited.config import Pool, Profile, Settings, save_pool
+import tokenwell.cli as cli
+from tokenwell.config import Pool, Profile, Settings, save_pool
 
 
 @pytest.fixture
@@ -16,8 +16,8 @@ def code_launch_env(monkeypatch, tmp_path):
     monkeypatch.setattr(cli.updater, "ensure_cli_aliases", lambda *a, **kw: None)
     monkeypatch.setattr(cli.hud_installer, "ensure_installed_quietly", lambda *a, **kw: "")
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     monkeypatch.setattr(cli, "_fetch_session_token",
                         lambda host, port, profile_id, timeout=2.0: f"session-tok-for-{profile_id}")
 
@@ -83,8 +83,8 @@ def test_codex_pinned_session_relabels_the_model_picker(monkeypatch):
     """Claude Code builds `/model` client-side from these env vars rather than
     asking the proxy, so a codex-pinned session must relabel the picker
     itself."""
-    from claude_unlimited import cli
-    from claude_unlimited.config import Profile
+    from tokenwell import cli
+    from tokenwell.config import Profile
 
     for tier in ("FABLE", "OPUS", "SONNET", "HAIKU"):
         for suffix in ("", "_NAME", "_DESCRIPTION"):
@@ -110,8 +110,8 @@ def test_codex_pinned_session_relabels_the_model_picker(monkeypatch):
 def test_non_codex_session_leaves_the_model_picker_alone(monkeypatch):
     """Without a pinned codex Profile the pool can rotate to any kind
     mid-session, so labelling every tier as a GPT model would be wrong."""
-    from claude_unlimited import cli
-    from claude_unlimited.config import Profile
+    from tokenwell import cli
+    from tokenwell.config import Profile
     import os
 
     monkeypatch.delenv("ANTHROPIC_DEFAULT_SONNET_MODEL_NAME", raising=False)
@@ -125,8 +125,8 @@ def test_non_codex_session_leaves_the_model_picker_alone(monkeypatch):
 
 
 def test_user_set_model_labels_are_never_overridden(monkeypatch):
-    from claude_unlimited import cli
-    from claude_unlimited.config import Profile
+    from tokenwell import cli
+    from tokenwell.config import Profile
     import os
 
     monkeypatch.setenv("ANTHROPIC_DEFAULT_SONNET_MODEL_NAME", "My Own Label")
@@ -136,7 +136,7 @@ def test_user_set_model_labels_are_never_overridden(monkeypatch):
 
 
 def _p(kind, pid="x", **kw):
-    from claude_unlimited.config import Profile
+    from tokenwell.config import Profile
     if kind == "oauth":
         kw.setdefault("account_uuid", "u")
     return Profile(id=pid, name=pid, kind=kind, priority=1, automatic=True, enabled=True, **kw)
@@ -152,7 +152,7 @@ def test_rotated_mixed_pool_uses_provider_neutral_labels(monkeypatch):
     """The picker is read once at launch and can never be updated, but a
     rotated session's provider changes per request — so no vendor-specific
     label can stay correct."""
-    from claude_unlimited import cli
+    from tokenwell import cli
     import os
     _clear(monkeypatch)
 
@@ -175,8 +175,8 @@ def test_codex_labels_come_from_the_live_parity_map_when_reachable(monkeypatch):
     right now (GPT-6 Astra today), not a hand-kept literal that silently went
     stale. When the daemon is reachable the labels are derived from GET
     /v1/models, effort split onto the description line."""
-    from claude_unlimited import cli
-    from claude_unlimited.config import Profile
+    from tokenwell import cli
+    from tokenwell.config import Profile
     import os
     _clear(monkeypatch)
 
@@ -201,8 +201,8 @@ def test_codex_labels_come_from_the_live_parity_map_when_reachable(monkeypatch):
 def test_parity_label_fetch_failure_falls_back_to_the_literals(monkeypatch):
     """A daemon that can't be reached must never leave the picker unlabelled —
     neutral offline tier names stand in without guessing model or effort."""
-    from claude_unlimited import cli
-    from claude_unlimited.config import Profile
+    from tokenwell import cli
+    from tokenwell.config import Profile
     import os
     _clear(monkeypatch)
 
@@ -216,7 +216,7 @@ def test_parity_label_fetch_failure_falls_back_to_the_literals(monkeypatch):
 def test_rotated_all_claude_pool_keeps_native_labels(monkeypatch):
     """Nothing can be mislabelled when every account is Claude, so don't
     replace Claude Code's own labels with worse generic ones."""
-    from claude_unlimited import cli
+    from tokenwell import cli
     import os
     _clear(monkeypatch)
 
@@ -227,7 +227,7 @@ def test_rotated_all_claude_pool_keeps_native_labels(monkeypatch):
 def test_status_line_shows_the_dashboard_url(monkeypatch, tmp_path):
     """The launch banner scrolls away; the status line keeps the Dashboard URL
     visible for the whole session."""
-    from claude_unlimited import cli
+    from tokenwell import cli
     import json
 
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
@@ -241,7 +241,7 @@ def test_status_line_shows_the_dashboard_url(monkeypatch, tmp_path):
 
 
 def test_status_line_never_overrides_one_the_user_configured(monkeypatch, tmp_path):
-    from claude_unlimited import cli
+    from tokenwell import cli
     import json
 
     (tmp_path / ".claude").mkdir()
@@ -254,7 +254,7 @@ def test_status_line_never_overrides_one_the_user_configured(monkeypatch, tmp_pa
 
 
 def test_status_line_yields_to_a_user_supplied_settings_flag(monkeypatch, tmp_path):
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
     monkeypatch.chdir(tmp_path)
@@ -274,7 +274,7 @@ def test_a_project_pinning_the_base_url_is_overridden(monkeypatch, tmp_path):
     somewhere else with whatever credential it carries — silently bypassing
     the pool the session was launched for."""
     import json as _json
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".claude" / "settings.json").write_text(_json.dumps({
@@ -294,7 +294,7 @@ def test_only_the_routing_keys_are_touched(monkeypatch, tmp_path):
     """A project's own env is its business — only the three keys that decide
     where traffic goes are reasserted."""
     import json as _json
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".claude" / "settings.json").write_text(_json.dumps({
@@ -311,7 +311,7 @@ def test_only_the_routing_keys_are_touched(monkeypatch, tmp_path):
 
 def test_a_project_without_routing_env_is_left_alone(monkeypatch, tmp_path):
     import json as _json
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".claude" / "settings.json").write_text(_json.dumps({"env": {"EDITOR": "vim"}}))
@@ -325,7 +325,7 @@ def test_a_project_without_routing_env_is_left_alone(monkeypatch, tmp_path):
 
 
 def test_a_user_supplied_settings_flag_still_wins(monkeypatch, tmp_path):
-    from claude_unlimited import cli
+    from tokenwell import cli
     _routing_env(monkeypatch)
     assert cli._status_line_args(4317, ["--settings", "mine.json"]) == []
 
@@ -333,7 +333,7 @@ def test_a_user_supplied_settings_flag_still_wins(monkeypatch, tmp_path):
 def _break_cwd(monkeypatch):
     """Simulate the WSL/drvfs failure: os.getcwd() raises mid-session (a
     transient I/O error, a deleted directory, a stale mount)."""
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     def _raise():
         raise OSError(5, "Input/output error")
@@ -343,7 +343,7 @@ def _break_cwd(monkeypatch):
 def test_settings_pinning_routing_survives_a_broken_cwd(monkeypatch, tmp_path):
     """Path.cwd() raising must not take the launch down over an advisory
     settings probe — the project-local candidates just drop out."""
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path / "nohome"))
     _break_cwd(monkeypatch)
@@ -353,7 +353,7 @@ def test_settings_pinning_routing_survives_a_broken_cwd(monkeypatch, tmp_path):
 
 
 def test_status_line_args_survives_a_broken_cwd(monkeypatch, tmp_path):
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
     _break_cwd(monkeypatch)
@@ -367,7 +367,7 @@ def test_status_line_still_honours_home_settings_when_cwd_is_broken(monkeypatch,
     """The HOME candidate doesn't depend on cwd at all, so it must still be
     checked even when the project-local candidates can't be built."""
     import json as _json
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".claude" / "settings.json").write_text(
@@ -383,8 +383,8 @@ def test_codex_picker_reflects_saved_list_and_unsets_removed_tiers(monkeypatch):
     """The /model labels come from the saved parity list: a row matches its
     tier by FAMILY (so a dated id still labels the slot), and a family the
     user removed leaves that tier's env unset rather than a stale default."""
-    from claude_unlimited import cli
-    from claude_unlimited.config import Profile
+    from tokenwell import cli
+    from tokenwell.config import Profile
     import os
     _clear(monkeypatch)
     monkeypatch.setattr(cli, "_fetch_parity_labels", lambda *a, **k: {
@@ -421,8 +421,8 @@ def test_1m_tiers_are_labelled_1m_context_and_haiku_is_not(monkeypatch):
     `claude-fable-5-1`) besides. `claude-haiku-4-5[1m]` likewise does not
     exist. So `_MODEL_TIER_IDS` suffixes only OPUS and SONNET, and this test's
     expectations follow that."""
-    from claude_unlimited import cli
-    from claude_unlimited.config import Profile
+    from tokenwell import cli
+    from tokenwell.config import Profile
     import os
 
     def _assert_prefixes(no_prefix_tiers):

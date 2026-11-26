@@ -2,18 +2,18 @@ import ssl
 
 import pytest
 
-import claude_unlimited.activity as activity
-import claude_unlimited.config as config
-import claude_unlimited.daemon as daemon
-import claude_unlimited.hud as hud
-import claude_unlimited.notifications as notifications
-import claude_unlimited.placeholder_token as placeholder_token
-import claude_unlimited.project_usage as project_usage
-import claude_unlimited.runtime_state as runtime_state
-import claude_unlimited.session_tokens as session_tokens
-import claude_unlimited.tls_trust as tls_trust
-import claude_unlimited.usage_history as usage_history
-import claude_unlimited.usage_probe as usage_probe
+import tokenwell.activity as activity
+import tokenwell.config as config
+import tokenwell.daemon as daemon
+import tokenwell.hud as hud
+import tokenwell.notifications as notifications
+import tokenwell.placeholder_token as placeholder_token
+import tokenwell.project_usage as project_usage
+import tokenwell.runtime_state as runtime_state
+import tokenwell.session_tokens as session_tokens
+import tokenwell.tls_trust as tls_trust
+import tokenwell.usage_history as usage_history
+import tokenwell.usage_probe as usage_probe
 
 
 @pytest.fixture(autouse=True)
@@ -42,7 +42,7 @@ def isolated_tls_trust(monkeypatch):
 @pytest.fixture(autouse=True)
 def isolated_app_dir(monkeypatch, tmp_path):
     """No test may ever read or write the developer's real
-    ~/.claude-unlimited/config.json.
+    ~/.tokenwell/config.json.
 
     Any code path that reaches config.load_pool() — including
     config.resolve_port(), which falls through to settings.port — picks up
@@ -56,13 +56,13 @@ def isolated_app_dir(monkeypatch, tmp_path):
     other modules bind their own file path from APP_DIR at IMPORT time
     (`FOO_FILE = APP_DIR / "foo.json"`), so patching config.APP_DIR after
     import never reaches them — they keep pointing at the real
-    ~/.claude-unlimited/ for the rest of the process. On a developer machine
+    ~/.tokenwell/ for the rest of the process. On a developer machine
     that silently reads/writes the real file instead of failing loudly; on a
-    clean CI runner (no ~/.claude-unlimited/ at all) it raises
+    clean CI runner (no ~/.tokenwell/ at all) it raises
     FileNotFoundError instead. Each of those constants is redirected here too,
     to the same tmp_path, for the same reason CONFIG_FILE is.
 
-    claude_unlimited.db (the v1.3.1 SQLite store) needs no constant of its
+    tokenwell.db (the v1.3.1 SQLite store) needs no constant of its
     own here: its module docstring guarantees it resolves its path from
     config.APP_DIR AT CALL TIME, never at import, specifically so the test
     suite's per-test APP_DIR swap is enough to isolate it. Redirecting
@@ -77,14 +77,14 @@ def isolated_app_dir(monkeypatch, tmp_path):
     monkeypatch.setattr(runtime_state, "RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
     monkeypatch.setattr(session_tokens, "SESSION_TOKENS_FILE", tmp_path / "session_tokens.json")
     monkeypatch.setattr(usage_history, "USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
-    # config.resolve_port() honours CLAUDE_UNLIMITED_PORT BEFORE it ever
+    # config.resolve_port() honours TOKENWELL_PORT BEFORE it ever
     # falls through to settings.port, so redirecting APP_DIR/CONFIG_FILE
     # above is not enough to isolate port resolution: if this var is set in
     # the developer's or CI's shell, it wins over the isolated config and
     # reintroduces the exact non-hermetic, machine-dependent failure this
     # fixture exists to prevent. A test that specifically wants to exercise
     # the env-var precedence can still set it itself after this fixture runs.
-    monkeypatch.delenv("CLAUDE_UNLIMITED_PORT", raising=False)
+    monkeypatch.delenv("TOKENWELL_PORT", raising=False)
 
     # The HUD installer writes into ~/Applications and ~/Library/LaunchAgents.
     # A test that reached those would uninstall the user's own HUD — so point
@@ -117,7 +117,7 @@ def no_background_threads_outliving_a_test(monkeypatch):
     live Profiles. Inside the suite the checks run inline instead, on the
     caller's thread, where the redirected paths still apply.
     """
-    import claude_unlimited.gateway as gateway
+    import tokenwell.gateway as gateway
 
     def run_inline(self, pool):
         try:
@@ -138,7 +138,7 @@ def no_real_process_signals(monkeypatch):
     quietly restarted it). The discovery seam now finds nothing by default;
     a test that needs a stray pid installs its own. The pid-file route is
     closed by no_real_home below."""
-    import claude_unlimited.cli as cli
+    import tokenwell.cli as cli
     monkeypatch.setattr(cli, "_pids_listening_on", lambda port: [])
 
 
@@ -146,7 +146,7 @@ def no_real_process_signals(monkeypatch):
 def no_real_home(monkeypatch, tmp_path):
     """Path.home() must never be the developer's home during a test.
 
-    cli._stop_running_daemon() reads ~/.claude-unlimited/daemon.pid and
+    cli._stop_running_daemon() reads ~/.tokenwell/daemon.pid and
     signals that pid; a test reaching it without patching Path.home would
     SIGTERM the live daemon (the lsof fallback above was one such route).
     Path.home() follows $HOME, so pointing $HOME at an empty directory closes

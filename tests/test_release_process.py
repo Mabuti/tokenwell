@@ -51,9 +51,9 @@ def test_the_installer_checks_with_its_own_bin_dir_on_path():
 def test_the_uninstaller_finds_the_launcher_without_relying_on_path():
     # Without this a fresh account skips `purge` and leaves credentials behind.
     script = (ROOT / "uninstall.sh").read_text(encoding="utf-8")
-    venv = script.index('"$INSTALL_ROOT/venv/bin/claude-unlimited"')
-    local_bin = script.index('"$HOME/.local/bin/claude-unlimited"')
-    on_path = script.index("command -v claude-unlimited")
+    venv = script.index('"$INSTALL_ROOT/venv/bin/tokenwell"')
+    local_bin = script.index('"$HOME/.local/bin/tokenwell"')
+    on_path = script.index("command -v tokenwell")
     assert venv < local_bin < on_path
     assert '[ -f "$candidate" ] && [ -x "$candidate" ]' in script
 

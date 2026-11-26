@@ -6,12 +6,12 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.observation import AuthInvalid, UsageSnapshot
-from claude_unlimited.router import ProfileState
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.gateway as gateway_module
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.observation import AuthInvalid, UsageSnapshot
+from tokenwell.router import ProfileState
+from tokenwell.upstream import UpstreamResponse
 
 
 class FakeConnection:
@@ -37,12 +37,12 @@ def fake_response(status, headers=None, body=b"ok"):
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore({"a": "tok-a", "b": "tok-b"}))
     return tmp_path
 
@@ -246,7 +246,7 @@ def test_no_eligible_profile_client_payload_is_rate_limit_error_not_overloaded(p
     # has result.error is None and streams the provider's own body back
     # verbatim), so it is unaffected by construction and isn't re-tested
     # here.
-    import claude_unlimited.daemon as daemon_module
+    import tokenwell.daemon as daemon_module
 
     empty_pool_result = gateway_module.GatewayResult(status=429, headers={}, body_chunks=None,
                                                        profile_id=None, error="no_eligible_profile")
@@ -316,7 +316,7 @@ def test_no_retry_after_escalation_streak_survives_intervening_sync_calls(pool_e
     # being incremented.
     import datetime as dt_module
 
-    from claude_unlimited.observation import ShortRateLimit
+    from tokenwell.observation import ShortRateLimit
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
     gw = Gateway(transport=lambda req: fake_response(429, {}))
@@ -497,7 +497,7 @@ def test_reauthenticating_a_profile_clears_stuck_auth_invalid_state(pool_env):
     # time-based recovery, unlike COOLDOWN/EXHAUSTED. Refreshing its credential
     # (CLI `login`, "Import current login", re-pasting a token) must be enough
     # to retry it on the next poll or request, with no disable/enable toggle.
-    import claude_unlimited.profiles as profile_repo
+    import tokenwell.profiles as profile_repo
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
 
@@ -554,9 +554,9 @@ def test_auth_invalid_oauth_profile_self_recovers_via_refresh_token_on_sync(pool
     # runtime_snapshot() — called by the Dashboard poll and the daemon's
     # background thread — must self-heal such a Profile from its refresh_token
     # alone, with no manual re-auth.
-    import claude_unlimited.oauth_credential as oauth_credential
-    import claude_unlimited.oauth_login as oauth_login
-    import claude_unlimited.profiles as profile_repo
+    import tokenwell.oauth_credential as oauth_credential
+    import tokenwell.oauth_login as oauth_login
+    import tokenwell.profiles as profile_repo
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
 
@@ -604,8 +604,8 @@ def test_rate_limited_refresh_backs_off_far_longer_than_a_normal_retry(pool_env,
     # Retrying a rate-limited token endpoint on the normal cooldown keeps the
     # limiter tripped, since each attempt is another strike against it. A 429
     # must push the next allowed attempt far past the normal cooldown.
-    import claude_unlimited.oauth_credential as oauth_credential
-    import claude_unlimited.oauth_login as oauth_login
+    import tokenwell.oauth_credential as oauth_credential
+    import tokenwell.oauth_login as oauth_login
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
 
@@ -644,8 +644,8 @@ def test_rate_limited_refresh_backs_off_far_longer_than_a_normal_retry(pool_env,
 def test_auth_invalid_profile_with_dead_refresh_token_stays_auth_invalid(pool_env, monkeypatch):
     # A refresh against a revoked or expired refresh_token must not fake a
     # recovery; the Profile still needs a manual re-auth.
-    import claude_unlimited.oauth_credential as oauth_credential
-    import claude_unlimited.oauth_login as oauth_login
+    import tokenwell.oauth_credential as oauth_credential
+    import tokenwell.oauth_login as oauth_login
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
 
@@ -674,9 +674,9 @@ def test_idle_eligible_oauth_profile_is_refreshed_by_sync_alone_no_request_neede
     # An ELIGIBLE Profile nearing expiry must be refreshed by runtime_snapshot()
     # itself (Dashboard poll, background thread). _maybe_refresh_credential runs
     # inside handle(), which never fires for a Profile nothing is routing to.
-    import claude_unlimited.oauth_credential as oauth_credential
-    import claude_unlimited.oauth_login as oauth_login
-    import claude_unlimited.profiles as profile_repo
+    import tokenwell.oauth_credential as oauth_credential
+    import tokenwell.oauth_login as oauth_login
+    import tokenwell.profiles as profile_repo
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
 
@@ -713,9 +713,9 @@ def test_expiring_oauth_credential_is_proactively_refreshed_before_use(pool_env,
     # at or near expiry. gateway.py must notice an expiring stored credential
     # and refresh it via its refresh_token BEFORE sending the request, not
     # after a 401 has already forced the Profile into AUTH_INVALID.
-    import claude_unlimited.oauth_credential as oauth_credential
-    import claude_unlimited.oauth_login as oauth_login
-    import claude_unlimited.profiles as profile_repo
+    import tokenwell.oauth_credential as oauth_credential
+    import tokenwell.oauth_login as oauth_login
+    import tokenwell.profiles as profile_repo
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
 
@@ -761,7 +761,7 @@ def test_expiring_oauth_credential_is_proactively_refreshed_before_use(pool_env,
 def test_oauth_credential_with_no_known_expiry_is_never_proactively_refreshed(pool_env, monkeypatch):
     # A plain credential string carries no expiry info and no refresh_token, so
     # it must never trigger a refresh attempt.
-    import claude_unlimited.oauth_login as oauth_login
+    import tokenwell.oauth_login as oauth_login
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore({"a": "plain-legacy-token"}))
@@ -790,8 +790,8 @@ def test_fresh_oauth_blob_credential_sends_the_decoded_access_token_not_the_raw_
     # DECODED access_token as the Bearer credential. The raw stored string is a
     # JSON object, and sending it produces a 401 indistinguishable from a
     # genuinely bad credential.
-    import claude_unlimited.oauth_credential as oauth_credential
-    import claude_unlimited.oauth_login as oauth_login
+    import tokenwell.oauth_credential as oauth_credential
+    import tokenwell.oauth_login as oauth_login
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
 
@@ -820,8 +820,8 @@ def test_fresh_oauth_blob_credential_sends_the_decoded_access_token_not_the_raw_
 
 def test_refresh_failure_falls_back_to_the_decoded_access_token_not_the_raw_blob(pool_env, monkeypatch):
     # Same guarantee as above, on the refresh-attempted-and-failed path.
-    import claude_unlimited.oauth_credential as oauth_credential
-    import claude_unlimited.oauth_login as oauth_login
+    import tokenwell.oauth_credential as oauth_credential
+    import tokenwell.oauth_login as oauth_login
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
 
@@ -1119,7 +1119,7 @@ def test_model_fallback_not_attempted_when_profile_has_no_default_model(pool_env
 
 
 def test_api_profile_over_its_token_threshold_is_excluded_from_rotation(pool_env):
-    import claude_unlimited.usage_history as usage_history
+    import tokenwell.usage_history as usage_history
     save_pool(Pool(profiles=[
         Profile(id="a", name="A", kind="api", priority=1, automatic=True, enabled=True, token_threshold=1000),
         Profile(id="b", name="B", kind="api", priority=2, automatic=True, enabled=True),
@@ -1136,7 +1136,7 @@ def test_api_profile_over_its_token_threshold_is_excluded_from_rotation(pool_env
 
 
 def test_api_profile_under_its_token_threshold_stays_eligible(pool_env):
-    import claude_unlimited.usage_history as usage_history
+    import tokenwell.usage_history as usage_history
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="api", priority=1, automatic=True, enabled=True,
                                       token_threshold=1000)]))
     usage_history.record("a", None, "claude-sonnet-5", {"input_tokens": 100, "output_tokens": 50})  # 150 < 1000
@@ -1149,7 +1149,7 @@ def test_api_profile_under_its_token_threshold_stays_eligible(pool_env):
 def test_token_threshold_has_no_effect_on_oauth_profiles(pool_env):
     # token_threshold is an api-kind concept only. Even when set (e.g. left over
     # from a kind change), it must never gate an OAuth Profile.
-    import claude_unlimited.usage_history as usage_history
+    import tokenwell.usage_history as usage_history
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True,
                                       token_threshold=100)]))
     usage_history.record("a", None, "claude-sonnet-5", {"input_tokens": 900, "output_tokens": 200})
@@ -1161,7 +1161,7 @@ def test_token_threshold_has_no_effect_on_oauth_profiles(pool_env):
 
 
 def test_token_threshold_does_not_override_auth_invalid_or_disabled(pool_env):
-    import claude_unlimited.usage_history as usage_history
+    import tokenwell.usage_history as usage_history
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="api", priority=1, automatic=True, enabled=False,
                                       token_threshold=1000)]))
     usage_history.record("a", None, "claude-sonnet-5", {"input_tokens": 100, "output_tokens": 50})
@@ -1204,7 +1204,7 @@ def test_lowering_switch_threshold_below_last_usage_does_not_falsely_recover(poo
 
 
 def test_raising_token_threshold_instantly_recovers_an_exhausted_api_profile(pool_env):
-    import claude_unlimited.usage_history as usage_history
+    import tokenwell.usage_history as usage_history
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="api", priority=1, automatic=True, enabled=True,
                                       token_threshold=100)]))
     usage_history.record("a", None, "claude-sonnet-5", {"input_tokens": 100, "output_tokens": 50})  # 150 >= 100
@@ -1238,8 +1238,8 @@ def test_usage_numbers_and_current_profile_survive_a_restart(pool_env):
     assert restored.resets_at is not None
     assert restored.state == gateway_module.ProfileState.ELIGIBLE  # state is not restored, only the numbers
 
-    from claude_unlimited.router import choose
-    from claude_unlimited.router import PoolSnapshot
+    from tokenwell.router import choose
+    from tokenwell.router import PoolSnapshot
     from datetime import datetime, timezone
     decision = choose(PoolSnapshot(profiles=list(gw2.runtime_snapshot().values()), current_profile_id="a"),
                        datetime.now(timezone.utc))
@@ -1266,7 +1266,7 @@ def test_expired_usage_number_is_not_restored_after_a_restart(pool_env):
 def test_rate_limited_refresh_backs_off_further_each_time(pool_env, monkeypatch):
     """A flat retry interval never lets a persistently rate-limited endpoint
     recover — it keeps arriving at the same rate indefinitely."""
-    import claude_unlimited.gateway as gw_mod
+    import tokenwell.gateway as gw_mod
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1,
                                       automatic=True, enabled=True, account_uuid="u")]))
     gw = Gateway(transport=lambda req: (_ for _ in ()).throw(AssertionError("no transport")))
@@ -1293,7 +1293,7 @@ def test_rate_limited_refresh_backs_off_further_each_time(pool_env, monkeypatch)
 
 
 def test_a_successful_refresh_clears_the_rate_limit_streak(pool_env, monkeypatch):
-    import claude_unlimited.gateway as gw_mod
+    import tokenwell.gateway as gw_mod
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1,
                                       automatic=True, enabled=True, account_uuid="u")]))
     gw = Gateway(transport=lambda req: (_ for _ in ()).throw(AssertionError("no transport")))
@@ -1307,7 +1307,7 @@ def test_a_successful_refresh_clears_the_rate_limit_streak(pool_env, monkeypatch
 
 
 def _runtime_file(tmp_path, monkeypatch):
-    import claude_unlimited.gateway as gw_mod
+    import tokenwell.gateway as gw_mod
     path = tmp_path / "runtime_state.json"
     monkeypatch.setattr(gw_mod.runtime_state, "RUNTIME_STATE_FILE", path)
     return path
@@ -1316,7 +1316,7 @@ def _runtime_file(tmp_path, monkeypatch):
 def test_needs_reauth_survives_a_restart(pool_env, monkeypatch):
     """A rejected credential does not repair itself by restarting. Coming back
     as 'healthy' would misreport it and fail on the next request anyway."""
-    import claude_unlimited.gateway as gw_mod
+    import tokenwell.gateway as gw_mod
     _runtime_file(pool_env, monkeypatch)
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1,
                                       automatic=True, enabled=True, account_uuid="u")]))
@@ -1331,7 +1331,7 @@ def test_needs_reauth_survives_a_restart(pool_env, monkeypatch):
 
 
 def test_usage_numbers_survive_a_restart(pool_env, monkeypatch):
-    import claude_unlimited.gateway as gw_mod
+    import tokenwell.gateway as gw_mod
     _runtime_file(pool_env, monkeypatch)
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1,
                                       automatic=True, enabled=True, account_uuid="u")]))
@@ -1424,7 +1424,7 @@ def test_an_auth_invalid_codex_profile_recovers_via_its_refresh_token(pool_env, 
     recovery a codex account was stranded until a manual re-auth, while the
     identical oauth case healed itself. AUTH_INVALID also survives a restart,
     so "restart the daemon" was not a way out either."""
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     _codex_pool()
     stored = openai_credential.encode(openai_credential.StoredOpenAICredential(
@@ -1451,7 +1451,7 @@ def test_an_auth_invalid_codex_profile_recovers_via_its_refresh_token(pool_env, 
 
 def test_a_codex_profile_whose_refresh_token_is_dead_stays_auth_invalid(pool_env, monkeypatch):
     """Recovery must never be faked: a revoked grant still needs a re-auth."""
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     _codex_pool()
     stored = openai_credential.encode(openai_credential.StoredOpenAICredential(
@@ -1576,7 +1576,7 @@ def test_repeated_rate_limits_back_off_but_never_stop_retrying(pool_env, monkeyp
 
     The escalating backoff is the protection: at the ceiling this is about four
     attempts a day, which is not noise against anyone's limiter."""
-    import claude_unlimited.gateway as gw_mod
+    import tokenwell.gateway as gw_mod
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1,
                                       automatic=True, enabled=True, account_uuid="u")]))
     gw = Gateway(transport=lambda req: (_ for _ in ()).throw(AssertionError("no transport")))
@@ -1625,7 +1625,7 @@ def test_a_stuck_account_does_not_hammer_the_token_endpoint(pool_env, monkeypatc
 
     A recovery poll does not need to be fast. A preventive refresh does, and
     keeps the short interval."""
-    import claude_unlimited.gateway as gw_mod
+    import tokenwell.gateway as gw_mod
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1,
                                       automatic=True, enabled=True, account_uuid="u")]))
@@ -1658,7 +1658,7 @@ def test_a_stuck_account_does_not_hammer_the_token_endpoint(pool_env, monkeypatc
 def test_a_preventive_refresh_stays_responsive(pool_env, monkeypatch):
     """The long interval is for recovery only. A healthy token that is genuinely
     near expiry must still be refreshed promptly."""
-    import claude_unlimited.gateway as gw_mod
+    import tokenwell.gateway as gw_mod
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1,
                                       automatic=True, enabled=True, account_uuid="u")]))
@@ -1873,9 +1873,9 @@ def test_the_gateway_lock_is_free_while_a_credential_refresh_runs(pool_env, monk
     provider's token endpoint. Holding the gateway lock across that made every
     Dashboard and widget poll queue behind it — 20-45s on a loaded machine,
     with the widget falling back to "loading" each time."""
-    import claude_unlimited.oauth_credential as oauth_credential
-    import claude_unlimited.oauth_login as oauth_login
-    import claude_unlimited.profiles as profile_repo
+    import tokenwell.oauth_credential as oauth_credential
+    import tokenwell.oauth_login as oauth_login
+    import tokenwell.profiles as profile_repo
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True)]))
 
@@ -1922,10 +1922,10 @@ def test_a_test_can_never_write_the_users_real_config(monkeypatch):
     """The backstop for what actually happened: a credential-check thread
     outlived its test, monkeypatch restored the real CONFIG_FILE, and the
     thread wrote its test pool over four live Profiles."""
-    import claude_unlimited.config as config
+    import tokenwell.config as config
     from pathlib import Path
 
-    monkeypatch.setattr(config, "CONFIG_FILE", Path.home() / ".claude-unlimited" / "config.json")
+    monkeypatch.setattr(config, "CONFIG_FILE", Path.home() / ".tokenwell" / "config.json")
     with pytest.raises(RuntimeError, match="refusing to write the real config"):
         config.save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth")]))
 
@@ -1958,10 +1958,10 @@ def test_exhaustion_is_announced_once_however_many_requests_are_rejected(monkeyp
     # announced-once guarantee this test is actually about is unaffected by
     # the status code.
     recorded = []
-    monkeypatch.setattr("claude_unlimited.gateway.activity.record",
+    monkeypatch.setattr("tokenwell.gateway.activity.record",
                         lambda category, text, meta=None: recorded.append(text))
     notified = []
-    monkeypatch.setattr("claude_unlimited.gateway.notifications.notify_if_enabled",
+    monkeypatch.setattr("tokenwell.gateway.notifications.notify_if_enabled",
                         lambda kind, title, body, settings: notified.append(body))
     gw, _ = _exhausted_pool_gateway(monkeypatch)
 
@@ -2000,9 +2000,9 @@ def test_a_pool_that_is_merely_unreachable_is_not_reported_as_exhausted(pool_env
 
 def test_capacity_coming_back_is_recorded_and_re_arms_the_announcement(monkeypatch, pool_env):
     recorded = []
-    monkeypatch.setattr("claude_unlimited.gateway.activity.record",
+    monkeypatch.setattr("tokenwell.gateway.activity.record",
                         lambda category, text, meta=None: recorded.append(text))
-    monkeypatch.setattr("claude_unlimited.gateway.notifications.notify_if_enabled",
+    monkeypatch.setattr("tokenwell.gateway.notifications.notify_if_enabled",
                         lambda kind, title, body, settings: None)
     gw, _ = _exhausted_pool_gateway(monkeypatch)   # announces
     gw.handle("POST", "/v1/messages", {}, b"{}")   # stays quiet
@@ -2090,7 +2090,7 @@ _OK_HEADERS = {"anthropic-ratelimit-unified-5h-utilization": "0.4",
 
 
 def _two_profiles(**settings_kwargs):
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
     return Pool(profiles=[
         Profile(id="a", name="A", kind="oauth", priority=1, automatic=True, enabled=True),
         Profile(id="b", name="B", kind="oauth", priority=2, automatic=True, enabled=True),
@@ -2480,7 +2480,7 @@ def test_is_model_refusal_wording():
 @pytest.mark.parametrize("kind", ["oauth", "api"])
 @pytest.mark.parametrize("effort, expected", [(None, "medium"), ("low", "medium"), ("max", "low")])
 def test_claude_parity_effort_overrides_reach_transport(pool_env, kind, effort, expected):
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
     rows = [{"claude_model": "claude-fable-5-1", "claude_effort": "medium"},
             {"claude_model": "claude-fable-5-1", "source_effort": "max", "claude_effort": "low"}]
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind=kind, automatic=True, enabled=True)], settings=Settings(model_parity=rows)))
@@ -2498,7 +2498,7 @@ def test_claude_parity_effort_overrides_reach_transport(pool_env, kind, effort, 
 
 
 def test_claude_model_retry_selects_override_from_original_request_effort(pool_env):
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
     rows = [{"claude_model": "claude-fable-5-1", "claude_effort": "low"},
             {"claude_model": "claude-sonnet-5", "claude_effort": "medium"},
             {"claude_model": "claude-sonnet-5", "source_effort": "max", "claude_effort": "high"}]

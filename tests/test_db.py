@@ -5,12 +5,12 @@ import threading
 
 import pytest
 
-import claude_unlimited.db as db
+import tokenwell.db as db
 
 
 @pytest.fixture
 def env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
     db.close_this_thread()
     yield tmp_path
     db.close_this_thread()
@@ -46,7 +46,7 @@ def test_connecting_twice_does_not_re_run_migrations(env):
 def test_each_app_dir_gets_its_own_database(env, monkeypatch, tmp_path):
     db.execute("INSERT INTO activity_event (ts, category, text) VALUES (?, ?, ?)", ("t", "config", "first"))
     other = tmp_path / "another-home"
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", other)
+    monkeypatch.setattr("tokenwell.config.APP_DIR", other)
     # The connection is keyed by resolved path, so moving APP_DIR (which every
     # test fixture does) must not keep reading the previous database.
     assert db.query("SELECT * FROM activity_event") == []

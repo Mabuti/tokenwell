@@ -4,13 +4,13 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import claude_unlimited.db as db
-import claude_unlimited.usage_history as usage_history
+import tokenwell.db as db
+import tokenwell.usage_history as usage_history
 
 
 @pytest.fixture
 def env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
     monkeypatch.setattr(usage_history, "USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
     return tmp_path
 
@@ -546,7 +546,7 @@ def test_eco_totals_sums_bytes_and_tokens():
 
 
 def test_eco_cost_prices_saved_tokens_at_the_input_rate():
-    from claude_unlimited import pricing
+    from tokenwell import pricing
     rate = pricing.find_price("claude-sonnet-5").input_per_mtok
     out = usage_history.eco_totals([_eco_ev(50_000, 200_000, mode="light")])
     # Saved tokens are INPUT tokens; prices are per MILLION.

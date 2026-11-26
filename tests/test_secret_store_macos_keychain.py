@@ -7,11 +7,11 @@ half then failed (locked Keychain, disk full, permission denial).
 
 from unittest.mock import MagicMock, patch
 
-from claude_unlimited.secret_store import macos_keychain
+from tokenwell.secret_store import macos_keychain
 
 
 def test_set_token_calls_add_with_update_flag_only_no_delete_first():
-    with patch("claude_unlimited.secret_store.macos_keychain.subprocess.run") as mock_run:
+    with patch("tokenwell.secret_store.macos_keychain.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
         macos_keychain.set_token("profile-1", "secret-token")
 
@@ -25,7 +25,7 @@ def test_set_token_calls_add_with_update_flag_only_no_delete_first():
 def test_set_token_does_not_swallow_a_real_add_failure():
     import subprocess
 
-    with patch("claude_unlimited.secret_store.macos_keychain.subprocess.run") as mock_run:
+    with patch("tokenwell.secret_store.macos_keychain.subprocess.run") as mock_run:
         mock_run.side_effect = subprocess.CalledProcessError(1, ["security"])
         try:
             macos_keychain.set_token("profile-1", "secret-token")

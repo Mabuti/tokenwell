@@ -1,8 +1,8 @@
 import pytest
 
-import claude_unlimited.anthropic_oauth as anthropic_oauth
-import claude_unlimited.cli as cli
-import claude_unlimited.profiles as profile_repo
+import tokenwell.anthropic_oauth as anthropic_oauth
+import tokenwell.cli as cli
+import tokenwell.profiles as profile_repo
 
 
 class FakeSecretStore:
@@ -26,10 +26,10 @@ class FakeSecretStore:
 def env(monkeypatch, tmp_path):
     store = FakeSecretStore()
     monkeypatch.setattr(profile_repo, "secret_store", store)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     return store
 
 
@@ -94,7 +94,7 @@ def test_reauth_refuses_same_account_different_org(env, monkeypatch, tmp_path, c
     reloaded = profile_repo.find_by_account_uuid("uuid-shared")
     assert reloaded.id == target.id
     assert reloaded.org_uuid == "org-team"  # not overwritten
-    import claude_unlimited.oauth_credential as oauth_credential
+    import tokenwell.oauth_credential as oauth_credential
     stored = oauth_credential.decode(env.get_token(target.id))
     assert stored.access_token == "old-tok-long"  # credential not swapped
 
@@ -124,7 +124,7 @@ def test_reauth_permits_and_backfills_when_target_org_is_none(env, monkeypatch, 
     assert reloaded.org_uuid == "org-newly-known"          # backfilled
     assert reloaded.organization_type == "claude_max"      # backfilled
 
-    import claude_unlimited.oauth_credential as oauth_credential
+    import tokenwell.oauth_credential as oauth_credential
     stored = oauth_credential.decode(env.get_token(target.id))
     assert stored.access_token == "fresh-tok-long"  # credential refreshed
 
@@ -189,7 +189,7 @@ def test_reauth_profile_id_unknown_is_clear_error(env, monkeypatch, tmp_path, ca
     error = capsys.readouterr().err
     assert "No Profile with id 'deadbeef' exists" in error
     assert "Overview card's command" in error
-    assert "claude-unlimited reauth` without `--profile`" in error
+    assert "tokenwell reauth` without `--profile`" in error
 
 
 def test_reauth_picker_prints_profile_ids_beside_names(env, monkeypatch, tmp_path, capsys):

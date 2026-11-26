@@ -1,9 +1,9 @@
 import os
 import pytest
 
-import claude_unlimited.anthropic_oauth as anthropic_oauth
-import claude_unlimited.cli as cli
-import claude_unlimited.profiles as profile_repo
+import tokenwell.anthropic_oauth as anthropic_oauth
+import tokenwell.cli as cli
+import tokenwell.profiles as profile_repo
 
 
 class FakeSecretStore:
@@ -26,10 +26,10 @@ class FakeSecretStore:
 @pytest.fixture
 def env(monkeypatch, tmp_path):
     monkeypatch.setattr(profile_repo, "secret_store", FakeSecretStore())
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
 
 
 class _FakeCompletedProcess:
@@ -195,7 +195,7 @@ def test_cli_aliases_dispatch_to_the_right_command(monkeypatch):
     """`ac` -> add_account, `aca` -> add_codex_account. argparse sets args.cmd
     to the ALIAS typed (not the canonical name), so main() must list each alias
     explicitly — `aca` was inert until it was added to the dispatch."""
-    from claude_unlimited import cli
+    from tokenwell import cli
     calls = []
     monkeypatch.setattr(cli, "add_account", lambda: calls.append("add_account") or 0)
     monkeypatch.setattr(cli, "add_codex_account", lambda: calls.append("add_codex_account") or 0)

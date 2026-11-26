@@ -7,10 +7,10 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.config as config
-import claude_unlimited.daemon as daemon
-import claude_unlimited.daemon_installer as daemon_installer
-import claude_unlimited.profiles as profile_repo
+import tokenwell.config as config
+import tokenwell.daemon as daemon
+import tokenwell.daemon_installer as daemon_installer
+import tokenwell.profiles as profile_repo
 
 
 class FakeSecretStore:
@@ -33,11 +33,11 @@ class FakeSecretStore:
 @pytest.fixture
 def running_server(monkeypatch, tmp_path):
     monkeypatch.setattr(profile_repo, "secret_store", FakeSecretStore())
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
 
     server = daemon.make_server(host="127.0.0.1", port=0)
     port = server.server_address[1]
@@ -85,13 +85,13 @@ def test_get_settings_includes_launcher_kinds_and_running_port(running_server):
         "kind": "claude",
         "label_key": "settings.launchers.claude",
         "default_command": "claude",
-        "used_by": "claude-unlimited code",
+        "used_by": "tokenwell code",
     }
     assert kinds["codex"] == {
         "kind": "codex",
         "label_key": "settings.launchers.codex",
         "default_command": "codex",
-        "used_by": "claude-unlimited add-codex-account",
+        "used_by": "tokenwell add-codex-account",
     }
     # existing settings keys are untouched siblings
     assert "launchers" in body["settings"]
@@ -105,7 +105,7 @@ def test_get_settings_launcher_kinds_reflects_a_registry_entry_added_at_runtime(
     # future CLI is one registry tuple entry with no daemon.py edit.
     extra = config.LauncherKind(
         kind="futurecli", label_key="settings.launchers.futurecli",
-        default_command="futurecli", used_by="claude-unlimited future-thing",
+        default_command="futurecli", used_by="tokenwell future-thing",
     )
     monkeypatch.setattr(config, "LAUNCHER_KINDS", config.LAUNCHER_KINDS + (extra,))
 
@@ -397,8 +397,8 @@ def test_port_change_persists_via_config_set_port(running_server, monkeypatch, t
 
 
 def test_run_foreground_bind_failure_names_config_path_and_port_key(monkeypatch, tmp_path, capsys):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
 
     busy_port = _free_port()
     holder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -414,4 +414,4 @@ def test_run_foreground_bind_failure_names_config_path_and_port_key(monkeypatch,
     assert str(tmp_path / "config.json") in err
     assert "port" in err
     assert '"settings"' in err
-    assert "claude-unlimited install" in err
+    assert "tokenwell install" in err

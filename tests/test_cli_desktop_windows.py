@@ -1,4 +1,4 @@
-r"""`claude-unlimited desktop` on Windows.
+r"""`tokenwell desktop` on Windows.
 
 The app's Windows layout is not a mirror of the macOS one and none of it is
 guessed - it was read off a configured Windows 11 install:
@@ -11,7 +11,7 @@ guessed - it was read off a configured Windows 11 install:
 
 Nothing here touches the real system: PowerShell is stubbed everywhere.
 """
-import claude_unlimited.cli as cli
+import tokenwell.cli as cli
 
 
 def test_windows_profiles_do_not_share_a_parent(monkeypatch, tmp_path):

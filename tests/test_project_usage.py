@@ -2,12 +2,12 @@ import threading
 
 import pytest
 
-import claude_unlimited.project_usage as project_usage
+import tokenwell.project_usage as project_usage
 
 
 @pytest.fixture
 def env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
     monkeypatch.setattr(project_usage, "USAGE_FILE", tmp_path / "project_usage.json")
     return tmp_path
 

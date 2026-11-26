@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-import claude_unlimited.usage_tracking as usage_tracking
+import tokenwell.usage_tracking as usage_tracking
 
 # Shaped exactly like a captured SSE stream from a Haiku request through the
 # proxy; see usage_tracking.py's module docstring.

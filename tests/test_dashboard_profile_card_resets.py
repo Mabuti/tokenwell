@@ -10,8 +10,8 @@ the daemon.
 """
 import re
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.i18n as i18n
+import tokenwell.daemon as daemon
+import tokenwell.i18n as i18n
 
 _APP_JS = (daemon._STATIC_DIR / "app.js").read_text(encoding="utf-8")
 

@@ -1,6 +1,6 @@
 import json
 
-from claude_unlimited.config import (
+from tokenwell.config import (
     Pool, Profile, Settings, save_pool, load_pool, DEFAULT_SWITCH_THRESHOLD, CONFIG_FILE, _default_port,
 )
 
@@ -9,6 +9,14 @@ def test_settings_launchers_and_port_defaults():
     s = Settings()
     assert s.launchers == {}
     assert s.port == _default_port()
+
+
+def test_new_environment_name_wins_and_legacy_name_falls_back(monkeypatch):
+    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", "6000")
+    monkeypatch.delenv("TOKENWELL_PORT", raising=False)
+    assert __import__("tokenwell.config", fromlist=["resolve_port"]).resolve_port(None) == 6000
+    monkeypatch.setenv("TOKENWELL_PORT", "6001")
+    assert __import__("tokenwell.config", fromlist=["resolve_port"]).resolve_port(None) == 6001
 
 
 def test_profile_defaults():
@@ -41,8 +49,8 @@ def test_pool_get_by_id():
 
 
 def test_save_and_load_pool_roundtrip(tmp_path, monkeypatch):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
 
     pool = Pool(profiles=[
         Profile(id="a", name="Personal Max", kind="oauth", priority=1, switch_threshold=98.0, automatic=True,
@@ -64,8 +72,8 @@ def test_save_and_load_pool_roundtrip(tmp_path, monkeypatch):
 
 
 def test_org_uuid_and_organization_type_round_trip_through_save_and_load(tmp_path, monkeypatch):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
 
     pool = Pool(profiles=[
         Profile(id="a", name="Org Seat", kind="oauth", account_uuid="uuid-a",
@@ -83,9 +91,9 @@ def test_profile_without_org_uuid_or_organization_type_loads_with_none_for_both(
     # Backward-compatibility guarantee: a config.json written before A3 has
     # neither key on a profile entry at all, and load_pool() must not KeyError
     # — both fields come back None, exactly like every other optional field.
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
     cfg_file = tmp_path / "config.json"
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", cfg_file)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", cfg_file)
     cfg_file.write_text(json.dumps({
         "profiles": [{"id": "a", "name": "Personal Max", "kind": "oauth", "account_uuid": "uuid-a", "plan": "max"}],
         "settings": {},
@@ -98,8 +106,8 @@ def test_profile_without_org_uuid_or_organization_type_loads_with_none_for_both(
 
 
 def test_launchers_and_port_round_trip_through_save_and_load(tmp_path, monkeypatch):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
 
     pool = Pool(settings=Settings(launchers={"claude": "claude --dangerously-skip-permissions"}, port=9999))
     save_pool(pool)
@@ -112,9 +120,9 @@ def test_launchers_and_port_round_trip_through_save_and_load(tmp_path, monkeypat
 def test_config_without_launchers_or_port_keys_loads_with_backward_compatible_defaults(tmp_path, monkeypatch):
     # Every config.json written before this ticket has no "launchers"/"port"
     # key under settings at all — load_pool() must not KeyError on it.
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
     cfg_file = tmp_path / "config.json"
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", cfg_file)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", cfg_file)
     cfg_file.write_text(json.dumps({"profiles": [], "settings": {"update_mode": "manual"}}))
 
     loaded = load_pool()
@@ -124,9 +132,9 @@ def test_config_without_launchers_or_port_keys_loads_with_backward_compatible_de
 
 
 def test_save_pool_writes_atomically_no_leftover_tmp_file(tmp_path, monkeypatch):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
     cfg_file = tmp_path / "config.json"
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", cfg_file)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", cfg_file)
 
     save_pool(Pool(profiles=[Profile(id="a", name="A")]))
 
@@ -139,8 +147,8 @@ def test_save_pool_writes_atomically_no_leftover_tmp_file(tmp_path, monkeypatch)
 def test_a_retired_codex_effort_in_a_saved_config_loads_as_its_equivalent(tmp_path, monkeypatch):
     # Issue #8: "ultra" was offered once and the backend now refuses it. A
     # config saved back then must neither send it nor fail to save again.
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     (tmp_path / "config.json").write_text(json.dumps({
         "profiles": [{"id": "c", "name": "C", "kind": "codex", "codex_reasoning_effort": "ultra"}],
         "settings": {"model_parity": [{"claude_model": "claude-opus-5-5", "model": "gpt-5.6-terra",

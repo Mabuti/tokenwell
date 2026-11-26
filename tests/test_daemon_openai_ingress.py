@@ -13,13 +13,13 @@ from datetime import datetime, timezone
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.openai_bridge as bridge_module
-from claude_unlimited import placeholder_token
-from claude_unlimited import session_tokens
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.gateway import GatewayResult
-from claude_unlimited.openai_credential import StoredOpenAICredential, encode
+import tokenwell.daemon as daemon
+import tokenwell.openai_bridge as bridge_module
+from tokenwell import placeholder_token
+from tokenwell import session_tokens
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.gateway import GatewayResult
+from tokenwell.openai_credential import StoredOpenAICredential, encode
 
 
 class FakeSecretStore:
@@ -67,13 +67,13 @@ class FakeHTTPSConnection:
 
 @pytest.fixture
 def server_with(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(placeholder_token, "APP_DIR", tmp_path)
     monkeypatch.setattr(placeholder_token, "TOKEN_FILE", tmp_path / "placeholder_token")
     monkeypatch.setattr(session_tokens, "SESSION_TOKENS_FILE", tmp_path / "session_tokens.json")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.gateway.secret_store", FakeSecretStore({
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.gateway.secret_store", FakeSecretStore({
         "c": encode(StoredOpenAICredential(access_token="tok-c", refresh_token=None,
                                            account_id="acct", id_token=None)),
         "o": "oauth-token",
@@ -151,7 +151,7 @@ def test_bad_local_token_on_responses_is_openai_shaped(server_with):
 
     assert status == 401
     assert set(payload) == {"error"}
-    assert payload["error"]["message"] == "[claude-unlimited] invalid local credential"
+    assert payload["error"]["message"] == "[tokenwell] invalid local credential"
 
 
 def test_bad_local_token_on_messages_is_unchanged(server_with):
@@ -161,7 +161,7 @@ def test_bad_local_token_on_messages_is_unchanged(server_with):
 
     assert status == 401
     assert payload == {"type": "error", "error": {"type": "authentication_error",
-                                                  "message": "[claude-unlimited] invalid local credential"}}
+                                                  "message": "[tokenwell] invalid local credential"}}
 
 
 def _write_session_token(token, *, mode=None, profile_id=None, created_at=None, last_used_at=None):
@@ -192,7 +192,7 @@ def test_expired_session_token_keeps_401_and_records_safe_diagnostics(server_wit
 
     assert status == 401
     assert payload == {"type": "error", "error": {"type": "authentication_error",
-                                                  "message": "[claude-unlimited] invalid local credential"}}
+                                                  "message": "[tokenwell] invalid local credential"}}
     assert len(events) == 1
     assert events[0][0] == "error"
     assert events[0][1] == "A session's local credential expired — restart that session to get a new one."
@@ -220,7 +220,7 @@ def test_expired_session_token_diagnostics_are_rate_limited(server_with, monkeyp
     for _ in range(20):
         status, _headers, payload = _error(_post(base, "/v1/messages", token=token))
         assert status == 401
-        assert payload["error"]["message"] == "[claude-unlimited] invalid local credential"
+        assert payload["error"]["message"] == "[tokenwell] invalid local credential"
 
     assert len(events) == 1
     warnings = [record for record in caplog.records if record.levelno == logging.WARNING]
@@ -230,7 +230,7 @@ def test_expired_session_token_diagnostics_are_rate_limited(server_with, monkeyp
     status, _headers, payload = _error(_post(base, "/v1/messages", token=token))
 
     assert status == 401
-    assert payload["error"]["message"] == "[claude-unlimited] invalid local credential"
+    assert payload["error"]["message"] == "[tokenwell] invalid local credential"
     assert len(events) == 2
     warnings = [record for record in caplog.records if record.levelno == logging.WARNING]
     assert len(warnings) == 2
@@ -247,7 +247,7 @@ def test_unknown_session_token_is_rejected_without_activity(server_with, monkeyp
     status, _headers, payload = _error(_post(base, "/v1/messages", token=token))
 
     assert status == 401
-    assert payload["error"]["message"] == "[claude-unlimited] invalid local credential"
+    assert payload["error"]["message"] == "[tokenwell] invalid local credential"
     assert events == []
     assert token not in caplog.text
 
@@ -422,4 +422,4 @@ def test_messages_late_refusal_is_still_the_anthropic_error_event(server_with, m
     event, payload = _last_event(data)
     assert event == b"event: error"
     assert payload == {"type": "error", "error": {"type": "rate_limit_error",
-                                                  "message": "[claude-unlimited] No eligible Profile is available right now."}}
+                                                  "message": "[tokenwell] No eligible Profile is available right now."}}

@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from claude_unlimited.secret_store import windows_dpapi as backend
+from tokenwell.secret_store import windows_dpapi as backend
 
 
 @pytest.fixture(autouse=True)

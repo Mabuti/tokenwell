@@ -7,10 +7,10 @@ import itertools
 
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-from claude_unlimited.config import Pool, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.router import ProfileState
+import tokenwell.gateway as gateway_module
+from tokenwell.config import Pool, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.router import ProfileState
 
 from test_gateway_openai_ingress import (  # noqa: F401 - pool_env is a fixture
     BODY, MOVE_BODY, SSE, FakeHTTPResponse, FakeSecretStore, Upstream, _codex, _codex_cred, _drain, _in,

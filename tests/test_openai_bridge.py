@@ -4,12 +4,12 @@ import time
 
 import pytest
 
-import claude_unlimited.openai_bridge as bridge_module
-import claude_unlimited.openai_login as login_module
-from claude_unlimited.config import Profile
-from claude_unlimited import codex_state
-from claude_unlimited.openai_bridge import ConversationContext, OpenAIBridgeError, run
-from claude_unlimited.openai_credential import StoredOpenAICredential, encode
+import tokenwell.openai_bridge as bridge_module
+import tokenwell.openai_login as login_module
+from tokenwell.config import Profile
+from tokenwell import codex_state
+from tokenwell.openai_bridge import ConversationContext, OpenAIBridgeError, run
+from tokenwell.openai_credential import StoredOpenAICredential, encode
 
 
 class FakeHTTPResponse:
@@ -430,21 +430,21 @@ def _codex_test_env(monkeypatch, tmp_path):
     _refresh_if_needed persists a successful refresh through
     profiles.update_credential_raw, which touches both.
     """
-    import claude_unlimited.activity as activity
-    import claude_unlimited.profiles as profile_repo
+    import tokenwell.activity as activity
+    import tokenwell.profiles as profile_repo
 
     store = FakeSecretStore()
     monkeypatch.setattr(profile_repo, "secret_store", store)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     monkeypatch.setattr(activity, "APP_DIR", tmp_path)
     monkeypatch.setattr(activity, "ACTIVITY_FILE", tmp_path / "activity.jsonl")
     return store, profile_repo
 
 
 def test_refresh_if_needed_persists_a_decodable_credential_on_success(monkeypatch, tmp_path):
-    from claude_unlimited.config import Pool, save_pool
-    from claude_unlimited.openai_credential import decode
+    from tokenwell.config import Pool, save_pool
+    from tokenwell.openai_credential import decode
 
     store, profile_repo = _codex_test_env(monkeypatch, tmp_path)
     profile = _subscription_profile(account_uuid="acct-1")
@@ -472,7 +472,7 @@ def test_refresh_if_needed_persists_a_decodable_credential_on_success(monkeypatc
 def test_refresh_if_needed_backs_off_far_longer_after_a_429(monkeypatch, tmp_path):
     store, profile_repo = _codex_test_env(monkeypatch, tmp_path)
     profile = _subscription_profile(account_uuid="acct-1")
-    from claude_unlimited.config import Pool, save_pool
+    from tokenwell.config import Pool, save_pool
     save_pool(Pool(profiles=[profile]))
 
     cred = StoredOpenAICredential(access_token=_expired_jwt(), refresh_token="ref-old",
@@ -707,7 +707,7 @@ def test_events_after_the_terminal_event_are_ignored(monkeypatch):
 
 def test_two_threads_refreshing_one_codex_account_send_the_token_once(monkeypatch):
     import threading as _threading
-    from claude_unlimited import openai_credential
+    from tokenwell import openai_credential
 
     started = _threading.Barrier(2, timeout=5)
     calls = []
@@ -737,7 +737,7 @@ def test_two_threads_refreshing_one_codex_account_send_the_token_once(monkeypatc
     monkeypatch.setattr(login_module, "refresh_access_token", slow_refresh)
     monkeypatch.setattr(bridge_module.openai_login, "refresh_access_token", slow_refresh)
 
-    import claude_unlimited.profiles as profile_repo
+    import tokenwell.profiles as profile_repo
     monkeypatch.setattr(profile_repo, "update_credential_raw", lambda *a, **k: None)
 
     cred = openai_credential.StoredOpenAICredential(
@@ -761,7 +761,7 @@ def test_a_failed_refresh_releases_the_slot(monkeypatch):
     """A claimed slot that is never released would block every future refresh
     of that Profile for the life of the daemon — a worse failure than the race
     it prevents, and a silent one."""
-    from claude_unlimited import openai_credential
+    from tokenwell import openai_credential
 
     monkeypatch.setattr(bridge_module, "_refresh_not_before", {})
     monkeypatch.setattr(bridge_module, "_refresh_in_progress", set())
@@ -779,7 +779,7 @@ def test_a_failed_refresh_releases_the_slot(monkeypatch):
 
 def test_an_unexpected_exception_also_releases_the_slot(monkeypatch):
     """Not just the handled OpenAILoginError — anything that escapes."""
-    from claude_unlimited import openai_credential
+    from tokenwell import openai_credential
 
     monkeypatch.setattr(bridge_module, "_refresh_not_before", {})
     monkeypatch.setattr(bridge_module, "_refresh_in_progress", set())
@@ -797,8 +797,8 @@ def test_an_unexpected_exception_also_releases_the_slot(monkeypatch):
 
 
 def test_a_successful_refresh_releases_the_slot(monkeypatch):
-    from claude_unlimited import openai_credential
-    import claude_unlimited.profiles as profile_repo
+    from tokenwell import openai_credential
+    import tokenwell.profiles as profile_repo
 
     monkeypatch.setattr(bridge_module, "_refresh_not_before", {})
     monkeypatch.setattr(bridge_module, "_refresh_in_progress", set())
@@ -843,7 +843,7 @@ def test_a_refused_effort_is_retried_on_the_same_model_with_the_nearest_supporte
 
 
 def test_a_retired_effort_saved_by_an_old_build_is_sent_as_its_equivalent():
-    from claude_unlimited import openai_models
+    from tokenwell import openai_models
     assert "ultra" not in openai_models.VALID_REASONING_EFFORTS
     assert openai_models.upgrade_reasoning_effort("ultra") == "max"
     assert openai_models.upgrade_reasoning_effort("high") == "high"

@@ -5,9 +5,9 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.export_import as export_import
-import claude_unlimited.profiles as profile_repo
+import tokenwell.daemon as daemon
+import tokenwell.export_import as export_import
+import tokenwell.profiles as profile_repo
 
 
 class FakeSecretStore:
@@ -32,12 +32,12 @@ def running_server(monkeypatch, tmp_path):
     store = FakeSecretStore()
     monkeypatch.setattr(profile_repo, "secret_store", store)
     monkeypatch.setattr(export_import, "secret_store", store)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr(export_import, "activity_module", __import__("claude_unlimited.activity", fromlist=["x"]))
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr(export_import, "activity_module", __import__("tokenwell.activity", fromlist=["x"]))
 
     server = daemon.make_server(host="127.0.0.1", port=0)
     port = server.server_address[1]
@@ -148,7 +148,7 @@ def test_import_preview_wrong_passphrase(running_server):
 
 @pytest.mark.parametrize('change', ['changed', 'same', 'omitted', 'disabled', 'invalid'])
 def test_import_invalidates_both_substitution_caches_only_when_parity_changes(running_server, monkeypatch, change):
-    from claude_unlimited import config, openai_bridge as bridge
+    from tokenwell import config, openai_bridge as bridge
     base, csrf = running_server
     initial = [{'claude_model': 'claude-fable-5-1', 'model': 'gpt-5.6-terra', 'effort': 'high'}]
     desired = [{'claude_model': 'claude-fable-5-1', 'model': 'gpt-5.6-sol', 'effort': 'max'}]
@@ -176,7 +176,7 @@ def test_import_invalidates_both_substitution_caches_only_when_parity_changes(ru
 
 
 def test_model_map_serves_curated_reference_even_with_custom_saved_rows(running_server):
-    from claude_unlimited import config
+    from tokenwell import config
     base, _ = running_server
     config.update_settings(model_parity=[{'claude_model': 'claude-custom', 'model': 'custom', 'effort': 'max'}])
     status, data = _request(f'{base}/api/codex/model-map')

@@ -5,10 +5,10 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.profiles as profile_repo
-from claude_unlimited.config import Pool, Profile, save_pool
+import tokenwell.daemon as daemon
+import tokenwell.gateway as gateway_module
+import tokenwell.profiles as profile_repo
+from tokenwell.config import Pool, Profile, save_pool
 
 
 class FakeSecretStore:
@@ -31,11 +31,11 @@ class FakeSecretStore:
 @pytest.fixture
 def running_server(monkeypatch, tmp_path):
     monkeypatch.setattr(profile_repo, "secret_store", FakeSecretStore())
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
 
     server = daemon.make_server(host="127.0.0.1", port=0)
     port = server.server_address[1]
@@ -145,7 +145,7 @@ def test_update_credential_rotates_the_stored_secret(running_server):
 
     # The stored shape is oauth_credential-encoded, not the raw string —
     # decoding it is what actually proves the rotation happened.
-    import claude_unlimited.oauth_credential as oauth_credential
+    import tokenwell.oauth_credential as oauth_credential
     decoded = oauth_credential.decode(profile_repo.secret_store.get_token(profile_id))
     assert decoded.access_token == "sk-ant-rotated-key"
 
@@ -210,7 +210,7 @@ def test_responses_never_cached(running_server):
 def test_update_endpoint_reports_state_without_touching_the_network(running_server, monkeypatch):
     """GET /api/update is a cheap read of the last known state: dashboard
     polling must never trigger an outbound request."""
-    from claude_unlimited import updater
+    from tokenwell import updater
 
     called = []
     monkeypatch.setattr(updater, "run_update_cycle", lambda *a, **k: called.append(1))
@@ -246,7 +246,7 @@ def test_add_profile_accepts_the_dashboard_form_payload(running_server):
 
 
 def test_branch_pins_expose_active_without_dropping_retained_pins(running_server, monkeypatch):
-    from claude_unlimited.gateway import BranchPin
+    from tokenwell.gateway import BranchPin
 
     now = [10000.0]
     monkeypatch.setattr(gateway_module, "_pin_clock", lambda: now[0])
@@ -266,7 +266,7 @@ def test_branch_pins_expose_active_without_dropping_retained_pins(running_server
 
 
 def test_status_and_profiles_report_active_window_separately_from_retained_pin(running_server, monkeypatch):
-    from claude_unlimited.gateway import BranchPin
+    from tokenwell.gateway import BranchPin
 
     save_pool(Pool(profiles=[Profile(id="p", name="P", kind="api", automatic=True)]))
     now = [10000.0]
@@ -326,7 +326,7 @@ def test_leave_on_fable_limit_is_on_the_wire_for_every_kind_and_settable(running
 
 
 def test_presence_needs_csrf_and_marks_the_user_active(running_server, monkeypatch, tmp_path):
-    import claude_unlimited.usage_probe as usage_probe
+    import tokenwell.usage_probe as usage_probe
     scheduler = usage_probe.Scheduler(state_file=tmp_path / "ups.json")
     monkeypatch.setattr(daemon, "_usage_probe", scheduler)
     base, token = running_server

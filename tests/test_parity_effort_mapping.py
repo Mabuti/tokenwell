@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from claude_unlimited import config, connectors, openai_models as models
+from tokenwell import config, connectors, openai_models as models
 
 
 EFFORTS = (None, *models.CLAUDE_REASONING_EFFORTS)
@@ -298,7 +298,7 @@ def test_server_accepts_64_rows_and_rejects_65():
 
 
 def test_offline_picker_model_and_effort_are_neutral():
-    from claude_unlimited import cli
+    from tokenwell import cli
     for labels in (cli._CODEX_MODEL_LABELS, cli._MIXED_MODEL_LABELS):
         for tier, (name, description) in labels.items():
             assert "GPT" not in name
@@ -309,7 +309,7 @@ def test_offline_picker_model_and_effort_are_neutral():
 @pytest.mark.parametrize("shape", ["absent", {}, [], None])
 @pytest.mark.parametrize("effort", EFFORTS)
 def test_import_legacy_settings_into_fresh_install_pins_ad6ef5f(shape, effort, monkeypatch):
-    from claude_unlimited import export_import as ei
+    from tokenwell import export_import as ei
     monkeypatch.setattr(models.model_catalogue, "current", lambda: None)
     monkeypatch.setattr(ei.activity_module, "record", lambda *a, **kw: None)
     assert not config.CONFIG_FILE.exists()
@@ -330,7 +330,7 @@ def test_import_legacy_settings_into_fresh_install_pins_ad6ef5f(shape, effort, m
 
 @pytest.mark.parametrize("shape", ["absent", {}, [], None, LEGACY_ROWS[:2]])
 def test_import_existing_settings_preserves_or_replaces_parity(shape, monkeypatch):
-    from claude_unlimited import export_import as ei
+    from tokenwell import export_import as ei
     monkeypatch.setattr(models.model_catalogue, "current", lambda: None)
     monkeypatch.setattr(ei.activity_module, "record", lambda *a, **kw: None)
     config.CONFIG_FILE.write_text(json.dumps({"settings": {
@@ -359,7 +359,7 @@ def test_import_existing_settings_preserves_or_replaces_parity(shape, monkeypatc
 
 
 def test_fresh_import_checks_config_existence_before_profile_writes(monkeypatch):
-    from claude_unlimited import export_import as ei
+    from tokenwell import export_import as ei
     monkeypatch.setattr(models.model_catalogue, "current", lambda: None)
     monkeypatch.setattr(ei.activity_module, "record", lambda *a, **kw: None)
     monkeypatch.setattr(ei.secret_store, "set_token", lambda *a: None)
@@ -403,7 +403,7 @@ def test_grid_missing_base_uses_curated_fallback():
 @pytest.mark.parametrize('action', ['fresh', 'reset'])
 def test_native_tier_seeds_survive_catalogue_deprecation(day, loaded, action, monkeypatch):
     from datetime import date
-    from claude_unlimited import cli, model_catalogue as catalogue
+    from tokenwell import cli, model_catalogue as catalogue
 
     class Today(date):
         @classmethod
@@ -433,7 +433,7 @@ def test_native_tier_seeds_survive_catalogue_deprecation(day, loaded, action, mo
 @pytest.mark.parametrize('loaded', [False, True])
 def test_legacy_empty_rows_still_pin_ad6ef5f_across_deprecation(day, loaded, monkeypatch):
     from datetime import date
-    from claude_unlimited import model_catalogue as catalogue
+    from tokenwell import model_catalogue as catalogue
     cat = catalogue.parse(json.loads(catalogue._VENDORED_FILE.read_text()), today=date.fromisoformat(day))
     monkeypatch.setattr(catalogue, 'current', lambda: cat if loaded else None)
     expected = LEGACY_EMPTY_ROWS
@@ -447,7 +447,7 @@ def test_legacy_empty_rows_still_pin_ad6ef5f_across_deprecation(day, loaded, mon
 @pytest.mark.parametrize('settings, import_settings', [(None, True), ({'model_parity': LEGACY_ROWS}, False)])
 @pytest.mark.parametrize('existing', [None, {}, LEGACY_ROWS])
 def test_profiles_only_import_never_seeds_follow(settings, import_settings, existing, monkeypatch):
-    from claude_unlimited import export_import as ei
+    from tokenwell import export_import as ei
     monkeypatch.setattr(models.model_catalogue, 'current', lambda: None)
     monkeypatch.setattr(ei.activity_module, 'record', lambda *a, **kw: None)
     monkeypatch.setattr(ei.secret_store, 'set_token', lambda *a: None)

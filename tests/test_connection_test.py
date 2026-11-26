@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from claude_unlimited import connection_test
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.upstream import UpstreamResponse
+from tokenwell import connection_test
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.upstream import UpstreamResponse
 
 
 class FakeConnection:
@@ -22,8 +22,8 @@ class FakeSecretStore:
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     # test_connection()'s per-Profile throttle lives in a module-level dict, so
     # it leaks across tests in the same process unless reset here.
     monkeypatch.setattr(connection_test, "_last_test_at", {})

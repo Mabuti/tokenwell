@@ -1,11 +1,11 @@
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.project_usage as project_usage
-import claude_unlimited.usage_history as usage_history
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.gateway as gateway_module
+import tokenwell.project_usage as project_usage
+import tokenwell.usage_history as usage_history
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.upstream import UpstreamResponse
 
 REAL_SHAPED_SSE = (
     b'event: message_start\n'
@@ -48,11 +48,11 @@ def fake_sse_response():
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore({"a": "tok-a"}))
     monkeypatch.setattr(usage_history, "USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
     monkeypatch.setattr(project_usage, "USAGE_FILE", tmp_path / "project_usage.json")
@@ -103,7 +103,7 @@ def test_usage_recorded_even_when_consumer_stops_before_full_drain(pool_env):
 
 
 def test_usage_is_attributed_to_resolved_project(pool_env, monkeypatch):
-    import claude_unlimited.project_attribution as project_attribution
+    import tokenwell.project_attribution as project_attribution
 
     projects_dir = pool_env / "claude_projects"
     proj_dir = projects_dir / "-Users-a-my-app"

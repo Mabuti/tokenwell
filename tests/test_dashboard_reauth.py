@@ -3,7 +3,7 @@
 import json
 import re
 
-import claude_unlimited.daemon as daemon
+import tokenwell.daemon as daemon
 
 
 _APP_JS = (daemon._STATIC_DIR / "app.js").read_text(encoding="utf-8")

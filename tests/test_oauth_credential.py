@@ -1,4 +1,4 @@
-from claude_unlimited.oauth_credential import StoredOAuthCredential, decode, encode, is_expiring_soon
+from tokenwell.oauth_credential import StoredOAuthCredential, decode, encode, is_expiring_soon
 
 
 def test_encode_returns_plain_string_when_nothing_extra_to_store():
@@ -38,7 +38,7 @@ def test_is_expiring_soon_false_when_expiry_unknown():
 def test_is_expiring_soon_true_once_inside_the_buffer_or_past():
     # Derived from the constant rather than hardcoded, since the buffer is tied
     # to the rate-limit backoff and has to be free to move.
-    from claude_unlimited.oauth_credential import EXPIRING_SOON_BUFFER_MS
+    from tokenwell.oauth_credential import EXPIRING_SOON_BUFFER_MS
 
     now_ms = 1_000_000_000_000
     one_minute = 60 * 1000
@@ -57,8 +57,8 @@ def test_refresh_buffer_outlasts_the_rate_limit_backoff():
     """The proactive-refresh buffer must exceed the post-429 backoff, or the
     token expires while refreshing is still blocked and the Profile needs a
     manual re-auth."""
-    from claude_unlimited.gateway import Gateway
-    from claude_unlimited import oauth_credential
+    from tokenwell.gateway import Gateway
+    from tokenwell import oauth_credential
 
     buffer_seconds = oauth_credential.EXPIRING_SOON_BUFFER_MS / 1000
     assert buffer_seconds > Gateway._RATE_LIMIT_BACKOFF_SECONDS, (

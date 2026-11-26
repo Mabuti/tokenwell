@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-import claude_unlimited.activity as activity
-import claude_unlimited.profiles as profiles
+import tokenwell.activity as activity
+import tokenwell.profiles as profiles
 
 
 def _fake_id_token(claims: dict) -> str:
@@ -21,7 +21,7 @@ def _codex_credential(*, account_id: str, user_id: str = None, access_token: str
     """An encoded codex credential blob carrying a real-shaped id_token, so
     openai_credential.chatgpt_user_id() can read chatgpt_user_id out of it —
     mirrors what `codex add-account` actually stores."""
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     id_token = _fake_id_token({"https://api.openai.com/auth": {
         "chatgpt_user_id": user_id, "chatgpt_account_id": account_id}}) if user_id else None
@@ -56,8 +56,8 @@ class FakeSecretStore:
 def fake_store(monkeypatch, tmp_path):
     store = FakeSecretStore()
     monkeypatch.setattr(profiles, "secret_store", store)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     monkeypatch.setattr(activity, "APP_DIR", tmp_path)
     monkeypatch.setattr(activity, "ACTIVITY_FILE", tmp_path / "activity.jsonl")
     return store
@@ -173,7 +173,7 @@ def test_create_rejects_unknown_kind(fake_store):
 
 
 def test_upsert_codex_profile_creates_new(fake_store, tmp_path):
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     # A real one, under the isolated-accounts root: delete_profile() rmtree's
     # codex_home, so anything outside that root is refused on the way in.
@@ -195,7 +195,7 @@ def test_upsert_codex_profile_creates_new(fake_store, tmp_path):
 
 
 def test_upsert_codex_profile_same_user_relogin_reuses_and_refreshes_in_place(fake_store, tmp_path):
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     home1 = str(tmp_path / "codex-accounts" / "home1")
     home2 = str(tmp_path / "codex-accounts" / "home2")
@@ -222,7 +222,7 @@ def test_upsert_codex_profile_create_path_persists_codex_user_id(fake_store):
     create_profile(), not just resolve it and drop it. Checked via
     load_pool() (not only the returned dataclass) so a mutant that resolves
     the id correctly but fails to actually persist it is still caught."""
-    from claude_unlimited.config import load_pool
+    from tokenwell.config import load_pool
 
     cred = _codex_credential(account_id="acct-new", user_id="user-fresh")
     created, reused = profiles.upsert_codex_profile(name="Fresh", account_id="acct-new", encoded_credential=cred)
@@ -239,7 +239,7 @@ def test_upsert_codex_profile_same_account_id_different_user_does_not_overwrite(
     """The 2026-09-22 incident, reproduced directly: two DIFFERENT ChatGPT
     users sharing the SAME chatgpt_account_id must end up as two Profiles,
     with neither credential overwritten by the other."""
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     home_a = str(tmp_path / "codex-accounts" / "user-a")
     home_b = str(tmp_path / "codex-accounts" / "user-b")
@@ -275,7 +275,7 @@ def test_upsert_codex_profile_legacy_profile_backfilled_on_same_user_relogin(fak
     but whose STORED credential already carries an id_token: re-login by the
     SAME user resolves that stored id_token locally, confirms the match, and
     backfills codex_user_id onto the Profile."""
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     legacy_cred = _codex_credential(account_id="acct-1", user_id="user-a", access_token="tok-legacy")
     legacy = profiles.create_profile(name="Legacy", kind="codex", credential=legacy_cred,
@@ -295,7 +295,7 @@ def test_upsert_codex_profile_legacy_profile_backfilled_on_same_user_relogin(fak
 
 
 def test_upsert_codex_profile_legacy_profile_resolving_to_different_user_not_overwritten(fake_store):
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     legacy_cred = _codex_credential(account_id="acct-1", user_id="user-a", access_token="tok-legacy")
     legacy = profiles.create_profile(name="Legacy", kind="codex", credential=legacy_cred,
@@ -319,7 +319,7 @@ def test_upsert_codex_profile_legacy_profile_with_unresolvable_credential_not_ov
     raw token shape, or an id_token missing the claim) can't be resolved
     locally, so an incoming same-account_id login — even one whose own user
     is known — must not overwrite it. A new Profile is created instead."""
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     unresolvable_cred = _codex_credential(account_id="acct-1", access_token="tok-raw")  # no user_id -> no id_token
     legacy = profiles.create_profile(name="Legacy", kind="codex", credential=unresolvable_cred,
@@ -340,7 +340,7 @@ def test_upsert_codex_profile_incoming_login_without_id_token_does_not_overwrite
     """The incoming side of the same rule: even against a Profile whose OWN
     identity is fully known, a new login that carries no id_token (unknown
     incoming user) must never be trusted to decide it's the same person."""
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     known_cred = _codex_credential(account_id="acct-1", user_id="user-a", access_token="tok-known")
     known, _ = profiles.upsert_codex_profile(name="Known", account_id="acct-1", encoded_credential=known_cred)
@@ -445,7 +445,7 @@ def test_upsert_codex_profile_legacy_candidate_with_token_missing_from_store_doe
 
 
 def test_update_credential_raw_stores_the_blob_as_is_and_stamps_credential_updated_at(fake_store):
-    import claude_unlimited.openai_credential as openai_credential
+    import tokenwell.openai_credential as openai_credential
 
     encoded = openai_credential.encode(openai_credential.StoredOpenAICredential(
         access_token="tok-a", refresh_token=None, account_id="acct-1", id_token=None))
@@ -635,7 +635,7 @@ def test_delete_removes_both_isolated_login_directories(fake_store, tmp_path, mo
     p = profiles.update_profile(p.id, codex_home=str(codex_dir))
 
     keychain = []
-    monkeypatch.setattr("claude_unlimited.anthropic_oauth.remove_isolated_logins",
+    monkeypatch.setattr("tokenwell.anthropic_oauth.remove_isolated_logins",
                         lambda dirs: keychain.extend(dirs) or len(dirs))
 
     profiles.delete_profile(p.id)
@@ -655,7 +655,7 @@ def test_reset_all_profiles_cleans_up_the_same_way(fake_store, tmp_path, monkeyp
                             account_uuid="u1", claude_config_dir=str(claude_dir))
 
     keychain = []
-    monkeypatch.setattr("claude_unlimited.anthropic_oauth.remove_isolated_logins",
+    monkeypatch.setattr("tokenwell.anthropic_oauth.remove_isolated_logins",
                         lambda dirs: keychain.extend(dirs) or len(dirs))
 
     assert profiles.reset_all_profiles() == 1
@@ -747,7 +747,7 @@ def test_a_config_with_two_forced_holders_still_loads_and_saves(fake_store):
     later save raise, while routing quietly used one of them."""
     import json
 
-    import claude_unlimited.config as config
+    import tokenwell.config as config
 
     a = profiles.create_profile(name="Claude", kind="oauth", credential="sk-ant-12345678", account_uuid="u1")
     b = profiles.create_profile(name="GPT", kind="oauth", credential="sk-ant-87654321", account_uuid="u2")

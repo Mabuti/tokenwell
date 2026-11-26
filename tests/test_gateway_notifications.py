@@ -1,10 +1,10 @@
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.notifications as notifications
-from claude_unlimited.config import Pool, Profile, Settings, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.gateway as gateway_module
+import tokenwell.notifications as notifications
+from tokenwell.config import Pool, Profile, Settings, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.upstream import UpstreamResponse
 
 
 class FakeConnection:
@@ -30,12 +30,12 @@ def fake_response(status, headers=None, body=b"ok"):
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore({"a": "tok-a", "b": "tok-b"}))
     return tmp_path
 
@@ -182,7 +182,7 @@ def test_quota_reset_fires_when_exhausted_profile_recovers(pool_env, notify_call
 def test_crossing_token_budget_fires_needs_attention_once(pool_env, notify_calls):
     # Crossing a token_threshold must notify exactly once, and it must happen
     # on the poll path rather than only on a request.
-    import claude_unlimited.usage_history as usage_history
+    import tokenwell.usage_history as usage_history
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="api", priority=1, automatic=True, enabled=True,
                                       token_threshold=231)], settings=_all_notifications_settings()))
     usage_history.record("a", None, "claude-sonnet-5", {"input_tokens": 200, "output_tokens": 66})  # 266 >= 231
@@ -199,7 +199,7 @@ def test_crossing_token_budget_fires_needs_attention_once(pool_env, notify_calls
 def test_token_budget_notification_suppressed_when_needs_attention_disabled(pool_env, notify_calls):
     settings = _all_notifications_settings()
     settings = Settings(**{**settings.__dict__, "notify_needs_attention": False})
-    import claude_unlimited.usage_history as usage_history
+    import tokenwell.usage_history as usage_history
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="api", priority=1, automatic=True, enabled=True,
                                       token_threshold=100)], settings=settings))
     usage_history.record("a", None, "claude-sonnet-5", {"input_tokens": 100, "output_tokens": 50})

@@ -1,7 +1,7 @@
 import pytest
 
-import claude_unlimited.activity as activity
-import claude_unlimited.db as db
+import tokenwell.activity as activity
+import tokenwell.db as db
 
 
 @pytest.fixture(autouse=True)

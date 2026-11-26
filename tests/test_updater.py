@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from claude_unlimited import updater
-from claude_unlimited.updater import Release, UpdateError
+from tokenwell import updater
+from tokenwell.updater import Release, UpdateError
 
 
 def _response(payload):
@@ -160,9 +160,11 @@ def _prepare(tmp_path):
     venv_bin.mkdir(parents=True)
     (venv_bin / "python").write_text("")
     # The console scripts pip regenerates on install — the aliaser links these
-    # out to bin_dir. Both names, so a real install exposes `cu` too.
-    (venv_bin / "claude-unlimited").write_text("#!/bin/sh\n")
+    # out to bin_dir. All four names are part of the public compatibility set.
+    (venv_bin / "tokenwell").write_text("#!/bin/sh\n")
+    (venv_bin / "tw").write_text("#!/bin/sh\n")
     (venv_bin / "cu").write_text("#!/bin/sh\n")
+    (venv_bin / "claude-unlimited").write_text("#!/bin/sh\n")
     bin_dir = tmp_path / "bin"
     return staged, app, tmp_path / "app.previous", venv_bin / "python", bin_dir
 
@@ -184,7 +186,7 @@ def test_install_links_both_cli_names_including_cu(tmp_path):
     updater.install_staged(staged, runner=lambda *a, **k: _completed(),
                             app_dir=app, previous_dir=previous, venv_python=venv,
                             bin_dir=bin_dir)
-    for name in ("claude-unlimited", "cu"):
+    for name in ("tokenwell", "tw", "cu", "claude-unlimited"):
         link = bin_dir / name
         assert link.is_symlink(), name
         assert link.resolve() == (venv.parent / name).resolve()
@@ -192,29 +194,29 @@ def test_install_links_both_cli_names_including_cu(tmp_path):
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX symlink behaviour")
 def test_ensure_cli_aliases_self_heals_a_missing_alias(tmp_path):
-    # An install that predates the `cu` alias has only claude-unlimited linked;
+    # An install that predates the `cu` alias has only tokenwell linked;
     # the next update must add the missing one without disturbing the other.
     venv_bin = tmp_path / "venv" / "bin"
     venv_bin.mkdir(parents=True)
-    (venv_bin / "claude-unlimited").write_text("#!/bin/sh\n")
+    (venv_bin / "tokenwell").write_text("#!/bin/sh\n")
     (venv_bin / "cu").write_text("#!/bin/sh\n")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    (bin_dir / "claude-unlimited").symlink_to(venv_bin / "claude-unlimited")
+    (bin_dir / "tokenwell").symlink_to(venv_bin / "tokenwell")
     assert not (bin_dir / "cu").exists()
 
     updater.ensure_cli_aliases(venv_scripts=venv_bin, bin_dir=bin_dir)
 
     assert (bin_dir / "cu").is_symlink()
     assert (bin_dir / "cu").resolve() == (venv_bin / "cu").resolve()
-    assert (bin_dir / "claude-unlimited").is_symlink()  # untouched
+    assert (bin_dir / "tokenwell").is_symlink()  # untouched
 
 
 def test_install_rolls_back_when_the_new_version_cannot_be_imported(tmp_path):
     staged, app, previous, venv, bin_dir = _prepare(tmp_path)
 
     def runner(cmd, **kw):
-        if cmd[1:3] == ["-c", "import claude_unlimited"]:
+        if cmd[1:3] == ["-c", "import tokenwell"]:
             return _completed(returncode=1, stderr="ImportError: boom")
         return _completed()
 
@@ -364,8 +366,8 @@ def test_install_prefers_a_real_venv_over_the_user_site(tmp_path, monkeypatch):
 def test_update_source_is_hardcoded_not_configurable():
     """A compromised config file must not be able to point the updater at a
     different repository."""
-    assert updater.CLONE_URL == "https://github.com/Mabuti/claude-unlimited.git"
-    assert updater.RELEASES_LATEST_URL.startswith("https://api.github.com/repos/Mabuti/claude-unlimited/")
+    assert updater.CLONE_URL == "https://github.com/Mabuti/tokenwell.git"
+    assert updater.RELEASES_LATEST_URL.startswith("https://api.github.com/repos/Mabuti/tokenwell/")
     source = Path(updater.__file__).read_text()
     assert "load_pool" not in source and "update_settings" not in source
 
@@ -478,12 +480,12 @@ def test_other_http_errors_are_still_reported(tmp_path):
 def test_install_is_held_back_while_the_pool_is_in_use(monkeypatch, tmp_path):
     """Installing swaps the running code and needs a restart, so it must never
     land mid-session. The download still happens; only applying it waits."""
-    import claude_unlimited.daemon as daemon_mod
+    import tokenwell.daemon as daemon_mod
 
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(daemon_mod._gateway, "is_idle", lambda _s: False)
 
     seen = {}
@@ -502,12 +504,12 @@ def test_install_is_held_back_while_the_pool_is_in_use(monkeypatch, tmp_path):
 
 
 def test_install_proceeds_when_idle(monkeypatch, tmp_path):
-    import claude_unlimited.daemon as daemon_mod
+    import tokenwell.daemon as daemon_mod
 
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(daemon_mod._gateway, "is_idle", lambda _s: True)
 
     seen = {}
@@ -522,19 +524,19 @@ def test_install_proceeds_when_idle(monkeypatch, tmp_path):
 
 
 def _settings_with_mode(mode):
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
     return Settings(update_mode=mode)
 
 
 def test_check_response_carries_the_version_fields_the_ui_shows(monkeypatch, tmp_path):
     """The check response and the GET must be the same shape. When it wasn't,
     the Dashboard blanked the installed and latest versions after a check."""
-    import claude_unlimited.daemon as daemon_mod
+    import tokenwell.daemon as daemon_mod
 
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(daemon_mod._gateway, "is_idle", lambda _s: True)
     monkeypatch.setattr(daemon_mod.updater, "run_update_cycle",
                         lambda *a, **k: updater.UpdateOutcome(release=None, action="none"))
@@ -551,12 +553,12 @@ def test_check_response_carries_the_version_fields_the_ui_shows(monkeypatch, tmp
 def test_check_now_never_downloads_or_installs(monkeypatch, tmp_path):
     """A button that says it is checking must not install software. The check
     endpoint pins the mode to manual regardless of the configured policy."""
-    import claude_unlimited.daemon as daemon_mod
+    import tokenwell.daemon as daemon_mod
 
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(daemon_mod._gateway, "is_idle", lambda _s: True)
 
     modes = []
@@ -576,12 +578,12 @@ def test_check_now_never_downloads_or_installs(monkeypatch, tmp_path):
 def test_background_policy_still_honours_the_configured_mode(monkeypatch, tmp_path):
     """The override is only for the explicit button — the background loop must
     still do what the user configured."""
-    import claude_unlimited.daemon as daemon_mod
+    import tokenwell.daemon as daemon_mod
 
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     monkeypatch.setattr(daemon_mod._gateway, "is_idle", lambda _s: True)
 
     modes = []
@@ -595,7 +597,7 @@ def test_background_policy_still_honours_the_configured_mode(monkeypatch, tmp_pa
 # ---- restarting after an install ----
 
 def test_a_service_managed_daemon_is_bounced_by_the_service_manager(monkeypatch):
-    import claude_unlimited.daemon as daemon_mod
+    import tokenwell.daemon as daemon_mod
 
     monkeypatch.setattr(daemon_mod._gateway, "_persist", lambda: None)
     monkeypatch.setattr(daemon_mod.daemon_installer, "status", lambda: {"installed": True, "running": True, "pid": 1})
@@ -611,7 +613,7 @@ def test_a_service_managed_daemon_is_bounced_by_the_service_manager(monkeypatch)
 def test_a_detached_daemon_launches_a_replacement(monkeypatch):
     """install.sh starts the daemon detached, so no service manager will bring
     it back — without a hand-off the update installs and nothing restarts."""
-    import claude_unlimited.daemon as daemon_mod
+    import tokenwell.daemon as daemon_mod
 
     monkeypatch.setattr(daemon_mod._gateway, "_persist", lambda: None)
     monkeypatch.setattr(daemon_mod.daemon_installer, "status", lambda: {"installed": False, "running": False, "pid": None})
@@ -626,12 +628,12 @@ def test_a_detached_daemon_launches_a_replacement(monkeypatch):
 
     assert daemon_mod._restart_for_update(4317) is True
     assert spawned, "a replacement must be launched"
-    assert "claude_unlimited" in " ".join(spawned[0]) or "-c" in spawned[0]
+    assert "tokenwell" in " ".join(spawned[0]) or "-c" in spawned[0]
     assert timers, "the current process must be told to exit"
 
 
 def test_a_failed_restart_is_recorded_not_swallowed(monkeypatch):
-    import claude_unlimited.daemon as daemon_mod
+    import tokenwell.daemon as daemon_mod
 
     monkeypatch.setattr(daemon_mod._gateway, "_persist", lambda: None)
     monkeypatch.setattr(daemon_mod.daemon_installer, "status", lambda: {"installed": True, "running": True, "pid": 1})
@@ -650,7 +652,7 @@ def test_a_failed_restart_is_recorded_not_swallowed(monkeypatch):
 def test_state_is_snapshotted_before_the_process_goes_away(monkeypatch):
     """The replacement reads this back, so skipping it means the Dashboard
     returns blank after every update."""
-    import claude_unlimited.daemon as daemon_mod
+    import tokenwell.daemon as daemon_mod
 
     order = []
     monkeypatch.setattr(daemon_mod._gateway, "_persist", lambda: order.append("persist"))
@@ -665,7 +667,7 @@ def test_recording_a_no_releases_outcome_notifies_nothing_and_does_not_crash():
     """`_record_update_outcome` dereferences outcome.release for anything it
     treats as newsworthy. "no_releases" carries no Release, so mistaking it for
     an actionable outcome is an AttributeError in a background loop."""
-    from claude_unlimited import daemon
+    from tokenwell import daemon
 
     outcome = updater.UpdateOutcome(release=None, action="no_releases")
     daemon._record_update_outcome(outcome, None)
@@ -682,14 +684,14 @@ def test_ensure_cli_aliases_never_clobbers_a_foreign_cu(tmp_path):
     # it didn't create — only its own stale link (one resolving into our install).
     venv_bin = tmp_path / "venv" / "bin"
     venv_bin.mkdir(parents=True)
-    (venv_bin / "claude-unlimited").write_text("#!/bin/sh\n")
+    (venv_bin / "tokenwell").write_text("#!/bin/sh\n")
     (venv_bin / "cu").write_text("#!/bin/sh\n")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     (bin_dir / "cu").write_text("echo the user's own cu\n")          # a real file
     foreign = tmp_path / "somewhere-else"
     foreign.write_text("x")
-    (bin_dir / "claude-unlimited").symlink_to(foreign)               # a foreign symlink
+    (bin_dir / "tokenwell").symlink_to(foreign)               # a foreign symlink
 
     updater.ensure_cli_aliases(venv_scripts=venv_bin, bin_dir=bin_dir)
 
@@ -697,4 +699,4 @@ def test_ensure_cli_aliases_never_clobbers_a_foreign_cu(tmp_path):
     assert not (bin_dir / "cu").is_symlink()
     assert (bin_dir / "cu").read_text() == "echo the user's own cu\n"
     # A foreign symlink for our own name is also left alone (points outside INSTALL_ROOT).
-    assert (bin_dir / "claude-unlimited").resolve() == foreign.resolve()
+    assert (bin_dir / "tokenwell").resolve() == foreign.resolve()

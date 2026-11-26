@@ -9,14 +9,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.openai_bridge as bridge_module
-from claude_unlimited import activity, usage_history
-from claude_unlimited.config import Pool, Profile, Settings, save_pool
-from claude_unlimited.gateway import Gateway, is_openai_ingress
-from claude_unlimited.openai_credential import StoredOpenAICredential, encode
-from claude_unlimited.router import ProfileState
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.gateway as gateway_module
+import tokenwell.openai_bridge as bridge_module
+from tokenwell import activity, usage_history
+from tokenwell.config import Pool, Profile, Settings, save_pool
+from tokenwell.gateway import Gateway, is_openai_ingress
+from tokenwell.openai_credential import StoredOpenAICredential, encode
+from tokenwell.router import ProfileState
+from tokenwell.upstream import UpstreamResponse
 
 
 # ---- fakes -----------------------------------------------------------------
@@ -107,9 +107,9 @@ def _codex_cred(token, account="acct-1"):
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore({
         "c1": _codex_cred("tok-c1", "acct-1"),
         "c2": _codex_cred("tok-c2", "acct-2"),
@@ -1064,7 +1064,7 @@ def test_a_credential_read_failure_is_a_503_not_a_429(pool_env, monkeypatch):
 # ---- F6/F7: in-flight accounting -----------------------------------------------------
 
 def test_a_result_discarded_unread_releases_its_slot_and_closes_the_upstream(pool_env, monkeypatch):
-    import claude_unlimited.daemon as daemon
+    import tokenwell.daemon as daemon
 
     save_pool(Pool(profiles=[_codex("c1")]))
     up = Upstream(monkeypatch, {"tok-c1": [_ok()]})

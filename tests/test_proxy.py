@@ -1,7 +1,7 @@
 import json
 
-from claude_unlimited.config import Profile
-from claude_unlimited.proxy import (
+from tokenwell.config import Profile
+from tokenwell.proxy import (
     ANTHROPIC_DEFAULT_BASE_URL,
     build_upstream_request,
     filter_response_headers,
@@ -270,8 +270,8 @@ def test_claude_effort_passthrough_on_a_non_json_body():
 
 import pytest
 
-from claude_unlimited import net_scope, upstream
-from claude_unlimited.proxy import UpstreamRequest
+from tokenwell import net_scope, upstream
+from tokenwell.proxy import UpstreamRequest
 
 
 @pytest.mark.parametrize("url", [

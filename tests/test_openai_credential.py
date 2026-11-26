@@ -2,7 +2,7 @@ import base64
 import json
 import time
 
-from claude_unlimited.openai_credential import (
+from tokenwell.openai_credential import (
     StoredOpenAICredential,
     access_token_expires_at,
     chatgpt_email,

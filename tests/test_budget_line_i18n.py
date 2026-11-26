@@ -7,8 +7,8 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parent.parent
-LOCALES = ROOT / "claude_unlimited" / "locales"
-APP_JS = ROOT / "claude_unlimited" / "static" / "app.js"
+LOCALES = ROOT / "tokenwell" / "locales"
+APP_JS = ROOT / "tokenwell" / "static" / "app.js"
 
 BUDGET_KEYS = {
     "settings.context1m.budget_one": ("{budget}",),

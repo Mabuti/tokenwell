@@ -1,8 +1,8 @@
 import io
 import json
 
-import claude_unlimited.openai_login as login_module
-from claude_unlimited.openai_login import OpenAILoginError, refresh_access_token
+import tokenwell.openai_login as login_module
+from tokenwell.openai_login import OpenAILoginError, refresh_access_token
 
 
 class _FakeResponse(io.BytesIO):
@@ -116,7 +116,7 @@ def test_refresh_access_token_falls_back_to_urllib_when_curl_not_on_path(monkeyp
 def test_missing_access_token_in_response_raises():
     # A pure post-parse validation path, reachable by monkeypatching _post_json
     # directly, so no network mocking is needed.
-    import claude_unlimited.openai_login as m
+    import tokenwell.openai_login as m
 
     def fake_post_json(url, payload, timeout, extra_headers=None):
         return 200, {}, json.dumps({"refresh_token": "ref-new"}).encode()

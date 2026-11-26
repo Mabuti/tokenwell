@@ -8,13 +8,13 @@ import sqlite3
 
 import pytest
 
-import claude_unlimited.db as db
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.usage_history as usage_history
-from claude_unlimited import openai_translate, speech
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.db as db
+import tokenwell.gateway as gateway_module
+import tokenwell.usage_history as usage_history
+from tokenwell import openai_translate, speech
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.upstream import UpstreamResponse
 
 TOOLS = [{"name": "Bash", "description": "run", "input_schema": {"type": "object"}}]
 SYSTEM = [{"type": "text", "text": "You are Claude Code."},
@@ -47,7 +47,7 @@ def test_each_level_is_fixed_text_that_keeps_the_safety_rules(level):
 
 
 def test_the_levels_share_a_config_list():
-    from claude_unlimited.config import SPEECH_LEVELS
+    from tokenwell.config import SPEECH_LEVELS
     assert SPEECH_LEVELS == speech.LEVELS
 
 
@@ -116,14 +116,14 @@ class FakeConnection:
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore())
     return tmp_path
 
 
 def _sent_body(level, kind="api", body=None, path="/v1/messages"):
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind=kind, automatic=True, enabled=True)],
                    settings=Settings(speech_level=level)))
     sent = []
@@ -191,7 +191,7 @@ def test_an_unparseable_body_fails_open():
 # ---- settings, storage, statistics ----------------------------------------
 
 def test_ships_off_and_rejects_unknown_levels():
-    from claude_unlimited.config import Settings, validated_settings_changes
+    from tokenwell.config import Settings, validated_settings_changes
     assert Settings().speech_level == "off"
     for level in speech.LEVELS:
         assert validated_settings_changes({"speech_level": level}) == {"speech_level": level}
@@ -201,7 +201,7 @@ def test_ships_off_and_rejects_unknown_levels():
 
 @pytest.fixture
 def db_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
     db.close_this_thread()
     yield tmp_path
     db.close_this_thread()
@@ -239,7 +239,7 @@ def test_every_setting_survives_a_save_and_load(pool_env):
     # so ECO saved as "light" silently came back "off" on the next load and
     # never ran. Any field missing from the reader fails here.
     from dataclasses import fields
-    from claude_unlimited.config import Settings, load_pool
+    from tokenwell.config import Settings, load_pool
     non_default = {"update_mode": "manual", "language": "ro", "notifications_enabled": False,
                    "notify_update_available": False, "notify_approaching_threshold": False,
                    "notify_rotated": True, "notify_quota_reset": True, "notify_needs_attention": False,
@@ -256,8 +256,8 @@ def test_every_setting_survives_a_save_and_load(pool_env):
 
 
 def test_unknown_eco_and_speech_values_load_as_off(pool_env):
-    from claude_unlimited.config import CONFIG_FILE, load_pool
-    import claude_unlimited.config as config
+    from tokenwell.config import CONFIG_FILE, load_pool
+    import tokenwell.config as config
     config.CONFIG_FILE.write_text(json.dumps({"profiles": [], "settings": {"eco_tier": "turbo", "speech_level": "wenyan"}}))
     loaded = load_pool().settings
     assert (loaded.eco_tier, loaded.speech_level) == ("off", "off")
@@ -339,8 +339,8 @@ def test_fable_limit_all_profiles_is_strict_and_the_retired_key_is_ignored(pool_
     """Only an explicit true turns the override on. An older config carrying
     the retired pool-wide model_limit_routing key (which meant something else)
     loads cleanly and turns nothing on."""
-    import claude_unlimited.config as config
-    from claude_unlimited.config import load_pool
+    import tokenwell.config as config
+    from tokenwell.config import load_pool
     config.CONFIG_FILE.write_text(json.dumps({"profiles": [], "settings": {
         "model_limit_routing": True, "fable_limit_all_profiles": "true"}}))
     loaded = load_pool().settings
@@ -351,8 +351,8 @@ def test_fable_limit_all_profiles_is_strict_and_the_retired_key_is_ignored(pool_
 
 
 def test_leave_on_fable_limit_loads_strictly_and_defaults_off(pool_env):
-    import claude_unlimited.config as config
-    from claude_unlimited.config import load_pool
+    import tokenwell.config as config
+    from tokenwell.config import load_pool
     config.CONFIG_FILE.write_text(json.dumps({"profiles": [
         {"id": "a", "name": "A", "kind": "oauth", "leave_on_fable_limit": True},
         {"id": "b", "name": "B", "kind": "oauth", "leave_on_fable_limit": "true"},

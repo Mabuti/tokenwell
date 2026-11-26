@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-import claude_unlimited.daemon_installer.macos_launchd as launchd
+import tokenwell.daemon_installer.macos_launchd as launchd
 
 # The launchd backend is macOS's. These assert its plist layout and launchctl
 # invocations, so on Windows they are not a failure, they are inapplicable —

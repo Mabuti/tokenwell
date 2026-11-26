@@ -1,11 +1,11 @@
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.project_attribution as project_attribution
-import claude_unlimited.project_usage as project_usage
-from claude_unlimited.config import Pool, Profile, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.gateway as gateway_module
+import tokenwell.project_attribution as project_attribution
+import tokenwell.project_usage as project_usage
+from tokenwell.config import Pool, Profile, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.upstream import UpstreamResponse
 
 
 class FakeConnection:
@@ -31,11 +31,11 @@ def fake_response(status, headers=None, body=b"ok"):
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore({"a": "tok-a"}))
     monkeypatch.setattr(project_usage, "USAGE_FILE", tmp_path / "project_usage.json")
 

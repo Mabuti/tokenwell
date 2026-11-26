@@ -3,7 +3,7 @@
 import json
 import re
 
-import claude_unlimited.daemon as daemon
+import tokenwell.daemon as daemon
 
 
 _APP_JS = (daemon._STATIC_DIR / "app.js").read_text(encoding="utf-8")
@@ -29,7 +29,7 @@ def test_reauth_action_posts_only_to_fixed_profile_endpoint_and_has_fallback():
     assert "method: 'POST'" in _APP_JS
     assert "mode: 'fallback'" in _APP_JS
     assert "data-action=\"copy-reauth\"" in _APP_JS
-    assert "claude-unlimited reauth --profile ${profileId}" in _APP_JS
+    assert "tokenwell reauth --profile ${profileId}" in _APP_JS
     assert "Terminal opened" not in _APP_JS  # rendered through the locale key
 
 

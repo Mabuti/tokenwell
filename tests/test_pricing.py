@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-import claude_unlimited.model_catalogue as mc
-import claude_unlimited.pricing as pricing
+import tokenwell.model_catalogue as mc
+import tokenwell.pricing as pricing
 
 TODAY = datetime.date(2026, 9, 7)
 

@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-from claude_unlimited import eco
+from tokenwell import eco
 
 
 # A spread of shapes ECO actually meets: repetitive build spam, log lines with
@@ -53,7 +53,7 @@ def test_compaction_is_deterministic_across_processes():
     # leak: set iteration or hash() order reaching the output. Same-process
     # repetition cannot catch that.
     script = (
-        "import json;from claude_unlimited import eco;"
+        "import json;from tokenwell import eco;"
         "t='\\n'.join(['dup line']*50)+'\\n'+'\\n'.join('u%d'%i for i in range(200));"
         "print(json.dumps(eco.compact_text(t,'light')))"
     )
@@ -245,14 +245,14 @@ def test_detect_needs_enough_lines_to_be_worth_it():
 # ---- gateway wiring ----
 
 def test_gateway_helper_is_a_no_op_when_eco_is_off():
-    from claude_unlimited import gateway
+    from tokenwell import gateway
     raw = __import__("json").dumps(_body("\n".join(["dup"] * 200))).encode()
     out, stats = gateway._eco_compact(raw, "off")
     assert out is raw and not stats.touched
 
 
 def test_gateway_helper_compacts_when_enabled():
-    from claude_unlimited import gateway
+    from tokenwell import gateway
     raw = __import__("json").dumps(_body("\n".join(["dup line"] * 300))).encode()
     out, stats = gateway._eco_compact(raw, "light")
     assert len(out) < len(raw)
@@ -260,7 +260,7 @@ def test_gateway_helper_compacts_when_enabled():
 
 
 def test_gateway_helper_fails_open_on_unparseable_bodies():
-    from claude_unlimited import gateway
+    from tokenwell import gateway
     for raw in [b"", b"not json", b"{", b'{"messages": 5}']:
         out, stats = gateway._eco_compact(raw, "light")
         assert out == raw
@@ -268,7 +268,7 @@ def test_gateway_helper_fails_open_on_unparseable_bodies():
 
 
 def test_gateway_helper_fails_open_when_a_filter_raises(monkeypatch):
-    from claude_unlimited import gateway
+    from tokenwell import gateway
     def boom(*a, **k):
         raise RuntimeError("bug in eco")
     monkeypatch.setattr(gateway.eco, "compact_request", boom)
@@ -278,7 +278,7 @@ def test_gateway_helper_fails_open_when_a_filter_raises(monkeypatch):
 
 
 def test_eco_ships_off_by_default():
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
     # It changes what the model sees, so it must be chosen, never inherited.
     assert Settings().eco_tier == "off"
 
@@ -286,7 +286,7 @@ def test_eco_ships_off_by_default():
 # ---- the settings field ----
 
 def test_eco_tier_is_accepted_and_value_checked():
-    from claude_unlimited.config import ECO_TIERS, validated_settings_changes
+    from tokenwell.config import ECO_TIERS, validated_settings_changes
     for tier in ECO_TIERS:
         assert validated_settings_changes({"eco_tier": tier}) == {"eco_tier": tier}
     with pytest.raises(ValueError):
@@ -302,7 +302,7 @@ def test_every_settings_field_is_changeable():
     # 400 — which is exactly how adding eco_tier broke the export/import
     # round-trip. Keep the two in sync.
     from dataclasses import fields
-    from claude_unlimited.config import Settings, _SETTINGS_FIELDS
+    from tokenwell.config import Settings, _SETTINGS_FIELDS
     # "port" is the one deliberate exception: it is a Settings field (so it
     # round-trips through save_pool/load_pool) but is NOT PATCHable — see the
     # comment on Settings.port and on _SETTINGS_FIELDS itself. Changing it
@@ -311,7 +311,7 @@ def test_every_settings_field_is_changeable():
 
 
 def test_every_eco_tier_is_a_known_tier_table():
-    from claude_unlimited.config import ECO_TIERS
+    from tokenwell.config import ECO_TIERS
     # config and eco must agree on the tier names, or a settable tier could
     # silently do nothing.
     assert set(ECO_TIERS) == set(eco.TIERS)
@@ -501,7 +501,7 @@ def test_git_diff_is_untouched_by_the_light_tier():
 # ---- measurement ----
 
 def test_bytes_saved_is_exact_and_tokens_are_calibrated():
-    from claude_unlimited.usage_history import calibrated_tokens_saved
+    from tokenwell.usage_history import calibrated_tokens_saved
     # 40,000 bytes billed as 10,000 tokens = 4 bytes/token; 4,000 saved bytes
     # is therefore ~1,000 tokens. Derived from what was actually billed, not a
     # fixed constant.
@@ -509,7 +509,7 @@ def test_bytes_saved_is_exact_and_tokens_are_calibrated():
 
 
 def test_tokens_saved_is_absent_rather_than_invented():
-    from claude_unlimited.usage_history import calibrated_tokens_saved
+    from tokenwell.usage_history import calibrated_tokens_saved
     # Nothing saved, nothing billed, or a ratio outside the believable band ->
     # store bytes only. A number that reads as measured must BE measured.
     assert calibrated_tokens_saved(0, 40000, 10000) is None
@@ -519,7 +519,7 @@ def test_tokens_saved_is_absent_rather_than_invented():
 
 
 def test_a_row_records_what_eco_saved(tmp_path, monkeypatch):
-    from claude_unlimited import config, db, usage_history
+    from tokenwell import config, db, usage_history
     monkeypatch.setattr(config, "APP_DIR", tmp_path)
     monkeypatch.setattr(db, "_degraded", {})
     event = usage_history.record("p1", None, "claude-sonnet-5",
@@ -538,7 +538,7 @@ def test_a_row_records_what_eco_saved(tmp_path, monkeypatch):
 
 
 def test_a_row_with_eco_off_stores_nulls(tmp_path, monkeypatch):
-    from claude_unlimited import config, db, usage_history
+    from tokenwell import config, db, usage_history
     monkeypatch.setattr(config, "APP_DIR", tmp_path)
     monkeypatch.setattr(db, "_degraded", {})
     event = usage_history.record("p1", None, "claude-sonnet-5",
@@ -621,7 +621,7 @@ def test_build_output_preserves_order_and_counts_what_it_drops():
 # ---- savings reach the usage row (end to end) ----
 
 def test_the_tier_that_produced_a_saving_is_recorded():
-    from claude_unlimited import gateway
+    from tokenwell import gateway
     import json as _json
     body = {"messages": [{"role": "user", "content": [
         {"type": "tool_result", "content": "\n".join(["dup line"] * 300)}]}]}
@@ -640,7 +640,7 @@ def test_eco_reaches_every_profile_kind():
     # reached only some of them would report savings that depend on which
     # account happened to serve the request.
     import inspect
-    from claude_unlimited import gateway
+    from tokenwell import gateway
     src = inspect.getsource(gateway.Gateway.handle)
     assert src.index("_eco_compact(body") < src.index('if profile.kind == "codex"')
     assert "headers, eco_body, now" in src
@@ -649,7 +649,7 @@ def test_eco_reaches_every_profile_kind():
 
 def test_usage_capture_carries_the_savings_to_record():
     import inspect
-    from claude_unlimited import gateway
+    from tokenwell import gateway
     params = inspect.signature(gateway.Gateway._wrap_with_usage_capture).parameters
     assert "eco_stats" in params and "sent_bytes" in params
     src = inspect.getsource(gateway.Gateway._wrap_with_usage_capture)
@@ -764,14 +764,14 @@ def _compressible_body() -> bytes:
 
 @pytest.fixture
 def eco_gateway_env(monkeypatch, tmp_path):
-    from claude_unlimited import config, db
-    import claude_unlimited.gateway as gateway_module
+    from tokenwell import config, db
+    import tokenwell.gateway as gateway_module
 
     monkeypatch.setattr(config, "APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE",
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE",
                         tmp_path / "runtime_state.json")
     monkeypatch.setattr(db, "_degraded", {})
 
@@ -799,17 +799,17 @@ def _sse_with_usage(input_tokens: int = 40) -> bytes:
 
 def _believable_input_tokens(body: bytes) -> int:
     """~4 bytes per token, the middle of the band the calibration trusts."""
-    from claude_unlimited import eco as _eco
+    from tokenwell import eco as _eco
     import json as _json
     compacted, _ = _eco.compact_request(_json.loads(body), "light")
     return max(1, len(_json.dumps(compacted).encode()) // 4)
 
 
 def test_an_eco_compacted_request_records_its_saving(eco_gateway_env, monkeypatch):
-    from claude_unlimited.config import Pool, Profile, Settings, save_pool
-    from claude_unlimited.gateway import Gateway
-    from claude_unlimited.upstream import UpstreamResponse
-    from claude_unlimited import usage_history
+    from tokenwell.config import Pool, Profile, Settings, save_pool
+    from tokenwell.gateway import Gateway
+    from tokenwell.upstream import UpstreamResponse
+    from tokenwell import usage_history
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", automatic=True, enabled=True)],
                    settings=Settings(eco_tier="light")))
@@ -847,10 +847,10 @@ def test_an_eco_compacted_request_records_its_saving(eco_gateway_env, monkeypatc
 
 
 def test_eco_off_records_no_saving(eco_gateway_env):
-    from claude_unlimited.config import Pool, Profile, Settings, save_pool
-    from claude_unlimited.gateway import Gateway
-    from claude_unlimited.upstream import UpstreamResponse
-    from claude_unlimited import usage_history
+    from tokenwell.config import Pool, Profile, Settings, save_pool
+    from tokenwell.gateway import Gateway
+    from tokenwell.upstream import UpstreamResponse
+    from tokenwell import usage_history
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", automatic=True, enabled=True)],
                    settings=Settings(eco_tier="off")))
@@ -878,11 +878,11 @@ def test_eco_off_records_no_saving(eco_gateway_env):
 def test_a_codex_request_records_its_saving_too(eco_gateway_env, monkeypatch):
     """Parity across Profile kinds: the codex path is a SEPARATE call site into
     _wrap_with_usage_capture, so it can lose eco_stats on its own."""
-    import claude_unlimited.gateway as gateway_module
-    from claude_unlimited.config import Pool, Profile, Settings, save_pool
-    from claude_unlimited.gateway import Gateway
-    from claude_unlimited.openai_bridge import OpenAIBridgeResult
-    from claude_unlimited import usage_history
+    import tokenwell.gateway as gateway_module
+    from tokenwell.config import Pool, Profile, Settings, save_pool
+    from tokenwell.gateway import Gateway
+    from tokenwell.openai_bridge import OpenAIBridgeResult
+    from tokenwell import usage_history
 
     save_pool(Pool(profiles=[Profile(id="c", name="C", kind="codex",
                                       auth_mode="chatgpt_subscription",
@@ -919,10 +919,10 @@ def test_a_wildly_compacted_request_records_bytes_but_no_token_estimate(eco_gate
     token figure is left NULL while the exact byte saving is still stored.
     Absent beats invented — the Statistics panel would otherwise show a
     confident number derived from nothing."""
-    from claude_unlimited.config import Pool, Profile, Settings, save_pool
-    from claude_unlimited.gateway import Gateway
-    from claude_unlimited.upstream import UpstreamResponse
-    from claude_unlimited import usage_history
+    from tokenwell.config import Pool, Profile, Settings, save_pool
+    from tokenwell.gateway import Gateway
+    from tokenwell.upstream import UpstreamResponse
+    from tokenwell import usage_history
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", automatic=True, enabled=True)],
                    settings=Settings(eco_tier="light")))

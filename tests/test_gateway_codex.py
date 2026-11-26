@@ -5,10 +5,10 @@ import time as real_time
 
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-from claude_unlimited.config import Pool, Profile, Settings, load_pool, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.openai_bridge import OpenAIBridgeError, OpenAIBridgeResult
+import tokenwell.gateway as gateway_module
+from tokenwell.config import Pool, Profile, Settings, load_pool, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.openai_bridge import OpenAIBridgeError, OpenAIBridgeResult
 
 
 class FakeSecretStore:
@@ -21,12 +21,12 @@ class FakeSecretStore:
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore({"c": "tok-c", "a": "tok-a"}))
     return tmp_path
 
@@ -277,7 +277,7 @@ def test_oauth_profile_models_listing_is_relayed_upstream_not_answered_locally(p
     """The registry only overrides kinds whose backend isn't Anthropic-shaped
     (connectors.models_listing returns None for oauth/api), so a Claude Profile
     keeps serving Anthropic's own model list."""
-    from claude_unlimited.upstream import UpstreamResponse
+    from tokenwell.upstream import UpstreamResponse
 
     class FakeConnection:
         def close(self):
@@ -299,7 +299,7 @@ def test_oauth_profile_models_listing_is_relayed_upstream_not_answered_locally(p
 
 
 def test_auth_invalid_codex_profile_rotates_to_next_eligible_profile(pool_env, monkeypatch):
-    from claude_unlimited.upstream import UpstreamResponse
+    from tokenwell.upstream import UpstreamResponse
 
     save_pool(Pool(profiles=[
         _codex_profile(priority=1),
@@ -337,7 +337,7 @@ def test_auth_invalid_codex_profile_rotates_to_next_eligible_profile(pool_env, m
 
 
 def test_openai_bridge_connection_failure_rotates_to_next_profile(pool_env, monkeypatch):
-    from claude_unlimited.upstream import UpstreamResponse
+    from tokenwell.upstream import UpstreamResponse
 
     save_pool(Pool(profiles=[
         _codex_profile(priority=1),
@@ -471,7 +471,7 @@ def test_usage_records_the_claude_model_asked_for_next_to_the_openai_one(pool_en
     or for Opus — the mapping is the only difference. Without the requested
     model the log cannot tell them apart, which is exactly what made a nested
     'fable' subagent impossible to spot from our own records."""
-    import claude_unlimited.usage_history as usage_history
+    import tokenwell.usage_history as usage_history
 
     save_pool(Pool(profiles=[_codex_profile()]))
 
@@ -496,7 +496,7 @@ def test_usage_records_the_claude_model_asked_for_next_to_the_openai_one(pool_en
 def test_a_non_streaming_codex_request_still_records_both_models(pool_env, monkeypatch):
     """stream:false takes the assemble-to-JSON path, which reads the same parsed
     body the requested model comes from."""
-    import claude_unlimited.usage_history as usage_history
+    import tokenwell.usage_history as usage_history
 
     save_pool(Pool(profiles=[_codex_profile()]))
 
@@ -576,7 +576,7 @@ def test_credit_headers_are_recorded_even_when_the_setting_is_off(pool_env, monk
     """Part 1 of the issue: the balance is DISPLAY, and display must work
     whether or not the pool is allowed to spend it — "why is this account idle
     when I paid for credits?" is the question that has to be answerable."""
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     save_pool(Pool(profiles=[_codex_profile()], settings=Settings(codex_spend_credits=False)))
     monkeypatch.setattr(gateway_module.openai_bridge, "run", _bridge_returning(200, _SPENT_HEADERS))
@@ -592,7 +592,7 @@ def test_credit_headers_are_recorded_even_when_the_setting_is_off(pool_env, monk
 
 
 def test_a_spent_codex_profile_with_credits_keeps_serving_only_when_allowed(pool_env, monkeypatch):
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     save_pool(Pool(profiles=[_codex_profile()], settings=Settings(codex_spend_credits=True)))
     monkeypatch.setattr(gateway_module.openai_bridge, "run", _bridge_returning(200, _SPENT_HEADERS))
@@ -604,7 +604,7 @@ def test_a_spent_codex_profile_with_credits_keeps_serving_only_when_allowed(pool
     rt = gw.runtime_snapshot()["c"]
     assert rt.state == gateway_module.ProfileState.ELIGIBLE
     assert rt.last_usage_percent == 100.0
-    from claude_unlimited.router import spending_on_credits
+    from tokenwell.router import spending_on_credits
     assert spending_on_credits(rt) is True
 
 
@@ -612,7 +612,7 @@ def test_a_429_quota_with_credits_does_not_exhaust_the_profile(pool_env, monkeyp
     """The plan window is genuinely gone (429), but the account can still be
     served from credits, so marking it EXHAUSTED would idle an account that
     works."""
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     save_pool(Pool(profiles=[_codex_profile()], settings=Settings(codex_spend_credits=True)))
     monkeypatch.setattr(gateway_module.openai_bridge, "run", _bridge_returning(429, _SPENT_HEADERS))
@@ -626,7 +626,7 @@ def test_a_429_quota_with_credits_does_not_exhaust_the_profile(pool_env, monkeyp
 
 
 def test_a_429_quota_without_credits_still_exhausts_the_profile(pool_env, monkeypatch):
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     headers = dict(_SPENT_HEADERS, **{"x-codex-credits-has-credits": "false",
                                        "x-codex-credits-balance": "0"})
@@ -644,7 +644,7 @@ def test_a_429_quota_without_credits_still_exhausts_the_profile(pool_env, monkey
 def test_turning_the_setting_off_stops_the_spending_on_the_next_sync(pool_env, monkeypatch):
     """A live toggle has to take effect now, not at the next request: the
     user turning it off is asking for the spending to stop."""
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     save_pool(Pool(profiles=[_codex_profile()], settings=Settings(codex_spend_credits=True)))
     monkeypatch.setattr(gateway_module.openai_bridge, "run", _bridge_returning(200, _SPENT_HEADERS))
@@ -664,7 +664,7 @@ def test_an_oauth_profile_never_gets_credit_permission(pool_env, monkeypatch):
     """_may_spend_credits is codex-only: no other backend reports a balance,
     and a permission that can never legitimately apply must not be mirrored
     onto the runtime where a later change could read it."""
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth", priority=1,
                                       automatic=True, enabled=True)],
@@ -675,7 +675,7 @@ def test_an_oauth_profile_never_gets_credit_permission(pool_env, monkeypatch):
 
 
 def test_credits_survive_a_restart(pool_env, monkeypatch):
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     save_pool(Pool(profiles=[_codex_profile()], settings=Settings(codex_spend_credits=True)))
     monkeypatch.setattr(gateway_module.openai_bridge, "run", _bridge_returning(200, _SPENT_HEADERS))
@@ -700,7 +700,7 @@ def test_credits_survive_a_restart(pool_env, monkeypatch):
 # ---------------------------------------------------------------------------
 
 def _unavailable(gpt_model, resets_at=None):
-    from claude_unlimited.observation import ModelWindow
+    from tokenwell.observation import ModelWindow
     return (ModelWindow(name=gpt_model, percent=100.0, resets_at=resets_at, active=True),)
 
 
@@ -724,7 +724,7 @@ def test_a_codex_profile_counts_as_spent_when_fables_gpt_target_is_unavailable(p
 
     assert "claude-fable-5" in gw._runtime["c"].blocked_models
 
-    from claude_unlimited.router import fable_spent, must_leave
+    from tokenwell.router import fable_spent, must_leave
     now = datetime.now(timezone.utc)
     assert fable_spent(gw._runtime["c"], now) is True
     assert must_leave(gw._runtime["c"], now) is True
@@ -734,7 +734,7 @@ def test_an_unavailable_non_fable_target_does_not_count_as_fable_spent(pool_env)
     """Only the Fable bucket drives the rule. Opus maps to a different GPT
     target; that one being unavailable is not a spent Fable week."""
     from datetime import datetime, timedelta, timezone
-    from claude_unlimited import openai_models
+    from tokenwell import openai_models
 
     save_pool(Pool(profiles=[_codex_profile(leave_on_fable_limit=True)]))
     gw = Gateway(transport=lambda req: None)
@@ -747,14 +747,14 @@ def test_an_unavailable_non_fable_target_does_not_count_as_fable_spent(pool_env)
         gw._runtime["c"].model_usage = _unavailable(opus_target, later)
     gw.runtime_snapshot()
 
-    from claude_unlimited.router import fable_spent
+    from tokenwell.router import fable_spent
     assert "claude-opus-5-5" in gw._runtime["c"].blocked_models   # the default Opus row
     assert fable_spent(gw._runtime["c"], datetime.now(timezone.utc)) is False
 
 
 def test_an_available_codex_model_does_not_block(pool_env):
     from datetime import datetime, timezone
-    from claude_unlimited.observation import ModelWindow
+    from tokenwell.observation import ModelWindow
 
     save_pool(Pool(profiles=[_codex_profile()]))
     gw = Gateway(transport=lambda req: None)
@@ -857,7 +857,7 @@ def test_a_non_codex_profile_never_gets_blocked_models(pool_env):
     """Anthropic reports a percentage per model, which fable_spent() tests
     directly; mirroring it into this set too would double-count."""
     from datetime import datetime, timedelta, timezone
-    from claude_unlimited.observation import ModelWindow
+    from tokenwell.observation import ModelWindow
 
     save_pool(Pool(profiles=[Profile(id="a", name="A", kind="oauth",
                                       automatic=True, enabled=True)]))
@@ -876,7 +876,7 @@ def test_a_real_session_leaves_a_codex_account_whose_fable_target_is_unavailable
     an Opus one included — must come back served by the Claude account; with
     the switch off the codex account keeps serving."""
     from datetime import datetime, timedelta, timezone
-    from claude_unlimited.upstream import UpstreamResponse
+    from tokenwell.upstream import UpstreamResponse
 
     class FakeConnection:
         def close(self):
@@ -939,7 +939,7 @@ def test_an_explicit_pin_still_reaches_a_codex_account_with_an_unavailable_model
     account, so it is served and they get the provider's own error — never a
     silent substitution."""
     from datetime import datetime, timedelta, timezone
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     save_pool(Pool(profiles=[
         _codex_profile(priority=1, leave_on_fable_limit=True),
@@ -979,8 +979,8 @@ import base64 as _b64
 import json as _json
 from datetime import datetime as _dt, timezone as _tz
 
-from claude_unlimited import gpt_windows as _gw
-from claude_unlimited.upstream import UpstreamResponse as _UpstreamResponse
+from tokenwell import gpt_windows as _gw
+from tokenwell.upstream import UpstreamResponse as _UpstreamResponse
 
 
 def _oauth(**overrides) -> Profile:
@@ -1042,7 +1042,7 @@ def _drain(result):
 
 
 def _activity_lines():
-    from claude_unlimited import activity
+    from tokenwell import activity
     return [f"{e.text} | {e.meta or ''}" for e in activity.list_events(limit=200)]
 
 
@@ -1148,7 +1148,7 @@ def test_the_prompt_too_long_never_replaces_capacity_exhaustion(pool_env, monkey
     Anthropic-only scenarios in test_gateway.py — the request never reaches
     the guard's own 400 "prompt too long" answer at all, since choose()
     can't offer an EXHAUSTED Profile as a candidate in the first place."""
-    from claude_unlimited.observation import QuotaExhausted
+    from tokenwell.observation import QuotaExhausted
     save_pool(Pool(profiles=[_codex_profile(priority=1)]))
     _codex_recorder(monkeypatch)
     gw = Gateway(transport=_anthropic_ok)
@@ -1419,8 +1419,8 @@ def test_capacity_guard_maps_requested_effort_override(pool_env):
 @pytest.mark.parametrize("branch", [False, True])
 @pytest.mark.parametrize("dated", [False, True])
 def test_fable_spent_uses_request_effort(pool_env, monkeypatch, spent_model, effort, expected, branch, dated):
-    from claude_unlimited.observation import ModelWindow
-    from claude_unlimited.upstream import UpstreamResponse
+    from tokenwell.observation import ModelWindow
+    from tokenwell.upstream import UpstreamResponse
     rows = [
         {"claude_model": "claude-fable-5-1", "model": "gpt-5.6-sol", "effort": "high"},
         {"claude_model": "claude-fable-5-1", "source_effort": "max",
@@ -1463,9 +1463,9 @@ def test_fable_spent_uses_request_effort(pool_env, monkeypatch, spent_model, eff
 @pytest.mark.parametrize('spent', ['gpt-6-astra', 'gpt-5.6-sol'])
 def test_fable_spent_effort_does_not_leak_from_other_models(pool_env, monkeypatch, requested, spent):
     from datetime import datetime, timezone
-    from claude_unlimited.observation import ModelWindow
-    from claude_unlimited.router import must_leave
-    from claude_unlimited.upstream import UpstreamResponse
+    from tokenwell.observation import ModelWindow
+    from tokenwell.router import must_leave
+    from tokenwell.upstream import UpstreamResponse
 
     rows = [
         {'claude_model': 'claude-fable-5-1', 'model': 'gpt-5.6-sol', 'effort': 'follow'},
@@ -1519,7 +1519,7 @@ def test_model_listing_and_picker_honor_independent_profile_pins(
         pool_env, monkeypatch, pinned, model_pin, effort_pin, row_effort):
     import io
     import os
-    from claude_unlimited import cli, openai_models
+    from tokenwell import cli, openai_models
 
     profile = _codex_profile(codex_model=model_pin, codex_reasoning_effort=effort_pin)
     rows = [{"claude_model": "claude-sonnet-5", "model": "gpt-5.6-terra", "effort": row_effort}]

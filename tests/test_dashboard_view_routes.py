@@ -4,7 +4,7 @@ The daemon is a Dashboard AND a live proxy on one listener: every unknown path
 falls through to be forwarded upstream. These routes must therefore be an
 exact-match allowlist — a prefix or catch-all would swallow real traffic.
 """
-import claude_unlimited.daemon as daemon
+import tokenwell.daemon as daemon
 
 
 def test_every_client_route_is_served_by_the_daemon():

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-import claude_unlimited.project_attribution as project_attribution
+import tokenwell.project_attribution as project_attribution
 
 
 def test_session_id_from_headers_case_insensitive():
@@ -60,8 +60,8 @@ def test_display_name_resolves_to_real_directory_basename():
 def test_display_name_falls_back_to_sanitized_form_when_ambiguous():
     # A directory name containing a hyphen is indistinguishable from a slash
     # under naive reversal, so an unverifiable path must not be asserted.
-    result = project_attribution.display_name("-Users-nobody-Work-claude-unlimited-definitely-not-real")
-    assert result == "Users-nobody-Work-claude-unlimited-definitely-not-real"
+    result = project_attribution.display_name("-Users-nobody-Work-tokenwell-definitely-not-real")
+    assert result == "Users-nobody-Work-tokenwell-definitely-not-real"
 
 
 def test_display_name_strips_leading_dash_in_fallback():

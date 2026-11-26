@@ -1,15 +1,15 @@
 import pytest
 
-import claude_unlimited.notifications as notifications
-from claude_unlimited.config import Settings
+import tokenwell.notifications as notifications
+from tokenwell.config import Settings
 
 # Bound directly rather than via the module attribute, so these tests exercise
 # the real implementations despite conftest.py's autouse no-op fixture:
 # rebinding a module attribute doesn't affect a name already bound by
 # `from ... import ...`.
-from claude_unlimited.notifications import send_macos_notification as real_send_macos_notification
-from claude_unlimited.notifications import send_linux_notification as real_send_linux_notification
-from claude_unlimited.notifications import send_windows_notification as real_send_windows_notification
+from tokenwell.notifications import send_macos_notification as real_send_macos_notification
+from tokenwell.notifications import send_linux_notification as real_send_linux_notification
+from tokenwell.notifications import send_windows_notification as real_send_windows_notification
 
 
 def test_applescript_string_literal_escapes_quotes_and_backslashes():

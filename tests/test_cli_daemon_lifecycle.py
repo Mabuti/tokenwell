@@ -4,9 +4,9 @@ import types
 import os
 import pytest
 
-import claude_unlimited.cli as cli
-import claude_unlimited.daemon_installer as daemon_installer
-from claude_unlimited import __version__
+import tokenwell.cli as cli
+import tokenwell.daemon_installer as daemon_installer
+from tokenwell import __version__
 
 
 def _stub_launch(monkeypatch, sink=None):
@@ -42,7 +42,7 @@ def _serving(monkeypatch, *versions):
 
 
 def test_start_when_already_running_is_a_friendly_noop(monkeypatch, capsys):
-    # A second `claude-unlimited start` must recognize its own daemon and exit
+    # A second `tokenwell start` must recognize its own daemon and exit
     # cleanly, not fail to bind the port.
     _serving(monkeypatch, __version__)
     calls = []
@@ -287,7 +287,7 @@ def test_add_codex_account_which_check_and_login_use_configured_executable_only(
 
 
 def test_reauth_which_check_and_login_use_configured_executable_only(monkeypatch, tmp_path):
-    from claude_unlimited.config import Pool, Profile
+    from tokenwell.config import Pool, Profile
 
     monkeypatch.setattr(cli, "CLAUDE_ACCOUNTS_DIR", tmp_path / "claude-accounts")
     monkeypatch.setattr(cli, "launch_argv", lambda kind: ["my-claude", "--dangerously-skip-permissions"])
@@ -310,11 +310,11 @@ def test_reauth_which_check_and_login_use_configured_executable_only(monkeypatch
 
 def test_install_port_precedence_env_var_used_when_no_explicit_flag(monkeypatch):
     """Confirms install's --port reader goes through resolve_port(): with no
-    --port flag, CLAUDE_UNLIMITED_PORT wins over DEFAULT_PORT (plan §3.4)."""
+    --port flag, TOKENWELL_PORT wins over DEFAULT_PORT (plan §3.4)."""
     calls = []
     monkeypatch.setattr(daemon_installer, "install", lambda port: calls.append(port))
     _serving(monkeypatch, None, __version__)
-    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", "6001")
+    monkeypatch.setenv("TOKENWELL_PORT", "6001")
 
     assert cli.main(["install"]) == 0
     assert calls == [6001]
@@ -420,7 +420,7 @@ def test_service_stop_failure(monkeypatch, capsys):
 def test_purge_refuses_without_confirmation_when_not_interactive(monkeypatch, capsys):
     """Deleting credentials and config is irreversible, so a piped invocation
     must not proceed silently."""
-    from claude_unlimited import cli
+    from tokenwell import cli
 
     monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: False)
     assert cli.purge(assume_yes=False) == 1
@@ -431,8 +431,8 @@ def test_purge_deletes_credentials_before_removing_the_config(monkeypatch, tmp_p
     """The config is the only record of which Profiles exist. Removing it
     first would strand their credentials in the keystore with no way left to
     enumerate them."""
-    from claude_unlimited import cli
-    from claude_unlimited.config import Pool, Profile
+    from tokenwell import cli
+    from tokenwell.config import Pool, Profile
 
     order = []
     deleted = []
@@ -441,14 +441,14 @@ def test_purge_deletes_credentials_before_removing_the_config(monkeypatch, tmp_p
         Profile(id="p1", name="A", kind="oauth", priority=1, automatic=True, enabled=True, account_uuid="u"),
         Profile(id="p2", name="B", kind="api", priority=2, automatic=True, enabled=True),
     ]))
-    import claude_unlimited.secret_store as store
+    import tokenwell.secret_store as store
     monkeypatch.setattr(store, "delete_token", lambda pid: (order.append("delete_token"), deleted.append(pid)))
 
     real_rmtree = cli.shutil.rmtree
     monkeypatch.setattr(cli.shutil, "rmtree",
                         lambda p, **k: order.append("rmtree"))
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
-    (tmp_path / ".claude-unlimited").mkdir()
+    (tmp_path / ".tokenwell").mkdir()
     monkeypatch.setattr(cli.daemon_installer, "stop", lambda: None)
     monkeypatch.setattr(cli.daemon_installer, "uninstall", lambda: None)
 
@@ -458,13 +458,13 @@ def test_purge_deletes_credentials_before_removing_the_config(monkeypatch, tmp_p
 
 
 def test_purge_never_touches_the_users_claude_directory(monkeypatch, tmp_path):
-    from claude_unlimited import cli
-    from claude_unlimited.config import Pool
+    from tokenwell import cli
+    from tokenwell.config import Pool
 
     claude_dir = tmp_path / ".claude"
     claude_dir.mkdir()
     (claude_dir / "CLAUDE.md").write_text("mine")
-    (tmp_path / ".claude-unlimited").mkdir()
+    (tmp_path / ".tokenwell").mkdir()
 
     monkeypatch.setattr(cli, "load_pool", lambda: Pool(profiles=[]))
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
@@ -473,16 +473,16 @@ def test_purge_never_touches_the_users_claude_directory(monkeypatch, tmp_path):
 
     assert cli.purge(assume_yes=True) == 0
     assert (claude_dir / "CLAUDE.md").read_text() == "mine"
-    assert not (tmp_path / ".claude-unlimited").exists()
+    assert not (tmp_path / ".tokenwell").exists()
 
 
 def test_purge_stops_a_daemon_the_service_manager_does_not_own(monkeypatch, tmp_path):
     """install.sh starts the daemon detached, so it is not a launchd job.
     Deregistering the service leaves it serving the dashboard."""
-    from claude_unlimited import cli
+    from tokenwell import cli
 
-    (tmp_path / ".claude-unlimited").mkdir()
-    (tmp_path / ".claude-unlimited" / "daemon.pid").write_text("4242")
+    (tmp_path / ".tokenwell").mkdir()
+    (tmp_path / ".tokenwell" / "daemon.pid").write_text("4242")
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
 
     killed = []
@@ -497,9 +497,9 @@ def test_purge_stops_a_daemon_the_service_manager_does_not_own(monkeypatch, tmp_
 def test_purge_warns_when_something_still_holds_the_port(monkeypatch, tmp_path, capsys):
     """Removing the files while a daemon is still serving would leave it
     running against deleted code — say so rather than reporting success."""
-    from claude_unlimited import cli
+    from tokenwell import cli
 
-    (tmp_path / ".claude-unlimited").mkdir()
+    (tmp_path / ".tokenwell").mkdir()
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
     monkeypatch.setattr(cli, "_probe_health", lambda *a, **k: True)   # never stops
     # Without these two, "still holds the port" fell through to a REAL lsof on
@@ -516,13 +516,13 @@ def test_purge_warns_when_something_still_holds_the_port(monkeypatch, tmp_path, 
 def test_purge_deregisters_the_service_before_removing_files(monkeypatch, tmp_path):
     """Order matters: if the login service is still registered when the app
     directory goes, it points at missing code on every future login."""
-    from claude_unlimited import cli
-    from claude_unlimited.config import Pool
+    from tokenwell import cli
+    from tokenwell.config import Pool
 
     order = []
     monkeypatch.setattr(cli, "load_pool", lambda: Pool(profiles=[]))
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
-    (tmp_path / ".claude-unlimited").mkdir()
+    (tmp_path / ".tokenwell").mkdir()
     monkeypatch.setattr(cli.daemon_installer, "uninstall", lambda: order.append("deregister"))
     monkeypatch.setattr(cli.daemon_installer, "stop", lambda: None)
     monkeypatch.setattr(cli, "_stop_running_daemon", lambda *a, **k: order.append("stop_daemon"))
@@ -537,10 +537,10 @@ def test_purge_never_removes_the_users_own_claude_login(monkeypatch, tmp_path):
     """The isolated logins add-account creates are ours to clean up. The
     un-suffixed 'Claude Code-credentials' is the user's real login and must
     survive — losing it would log them out of plain `claude`."""
-    from claude_unlimited import cli
-    from claude_unlimited.anthropic_oauth import MACOS_KEYCHAIN_SERVICE
+    from tokenwell import cli
+    from tokenwell.anthropic_oauth import MACOS_KEYCHAIN_SERVICE
 
-    from claude_unlimited import anthropic_oauth
+    from tokenwell import anthropic_oauth
     monkeypatch.setattr(cli.sys, "platform", "darwin")
     # The removal decides by platform.system(), not sys.platform — without
     # this the test only passes on a Mac, and fails on Linux CI.
@@ -568,13 +568,13 @@ def test_purge_never_removes_the_users_own_claude_login(monkeypatch, tmp_path):
 
 def test_purge_leaves_the_claude_directory_and_its_credentials_alone(monkeypatch, tmp_path):
     """~/.claude holds the user's own Claude Code setup and login."""
-    from claude_unlimited import cli
-    from claude_unlimited.config import Pool
+    from tokenwell import cli
+    from tokenwell.config import Pool
 
     claude = tmp_path / ".claude"
     (claude / "projects").mkdir(parents=True)
     (claude / ".credentials.json").write_text("the user's own login")
-    (tmp_path / ".claude-unlimited").mkdir()
+    (tmp_path / ".tokenwell").mkdir()
 
     monkeypatch.setattr(cli, "load_pool", lambda: Pool(profiles=[]))
     monkeypatch.setattr(cli.Path, "home", staticmethod(lambda: tmp_path))
@@ -662,7 +662,7 @@ def test_stop_never_kills_a_process_that_is_not_ours(monkeypatch, capsys):
 def test_is_our_daemon_matches_on_the_command_line(monkeypatch):
     class R:
         stdout = ("/opt/homebrew/Cellar/python@3.14/.../Python "
-                  "-m claude_unlimited start --port 4317")
+                  "-m tokenwell start --port 4317")
     monkeypatch.setattr(cli.subprocess, "run", lambda *a, **kw: R())
     assert cli._is_our_daemon(1) is True
 
@@ -682,14 +682,14 @@ def test_is_our_daemon_matches_on_the_command_line(monkeypatch):
 
 @pytest.mark.parametrize("bad", ["0", "80", "1023", "65536", "99999"])
 def test_bad_port_flag_exits_cleanly_instead_of_tracebacking(bad, monkeypatch, capsys):
-    monkeypatch.delenv("CLAUDE_UNLIMITED_PORT", raising=False)
+    monkeypatch.delenv("TOKENWELL_PORT", raising=False)
 
     with pytest.raises(SystemExit) as excinfo:
         cli.main(["start", "--port", bad])
 
     assert excinfo.value.code == 2
     err = capsys.readouterr().err
-    assert err.startswith("claude-unlimited: ")
+    assert err.startswith("tokenwell: ")
     assert bad in err
     assert "Traceback" not in err
     assert err.count("\n") == 1, "a bad flag value gets one line, like argparse"

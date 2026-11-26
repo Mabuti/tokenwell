@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from claude_unlimited.observation import (
+from tokenwell.observation import (
     AuthInvalid,
     ProviderUnavailable,
     QuotaExhausted,
@@ -231,7 +231,7 @@ def test_should_retry_header_survives_the_response_header_filter():
     let through. The fix is inert if x-should-retry is filtered out before
     it arrives -- which is exactly what happened before it was added to
     ALLOWED_HEADERS, so this guards the wiring, not just the logic."""
-    from claude_unlimited.proxy import filter_response_headers
+    from tokenwell.proxy import filter_response_headers
 
     filtered = filter_response_headers({"X-Should-Retry": "true", "x-irrelevant": "drop me"})
     assert filtered.get("x-should-retry") == "true"

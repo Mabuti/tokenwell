@@ -8,8 +8,8 @@ network — so they hold no matter what the daemon has initialized.
 
 import datetime
 
-import claude_unlimited.model_catalogue as mc
-from claude_unlimited.openai_models import (
+import tokenwell.model_catalogue as mc
+from tokenwell.openai_models import (
     unmapped_claude_models,
     _DEFAULT_TARGET,
     _LEGACY_SELECTABLE,
@@ -204,7 +204,7 @@ def test_the_daemon_surfaces_pick_up_an_initialized_catalogue(monkeypatch):
     cat = make_catalogue()
     monkeypatch.setattr(mc, "_current", cat)
     try:
-        from claude_unlimited import connectors
+        from tokenwell import connectors
         listing = connectors.models_listing("codex")
         # Default saved list -> the four family heads; first is the fable head.
         assert [mid for mid, _ in listing][0] == "claude-fable-5"
@@ -233,7 +233,7 @@ def test_a_fully_renamed_lineup_spreads_across_the_curated_tiers():
 # ---- Claude-side effort support gate (Feature 1) ----
 
 import pytest
-from claude_unlimited.openai_models import apply_claude_effort, claude_effort_for, normalize_parity, default_parity_rows
+from tokenwell.openai_models import apply_claude_effort, claude_effort_for, normalize_parity, default_parity_rows
 
 
 @pytest.mark.parametrize("model,requested,expected", [

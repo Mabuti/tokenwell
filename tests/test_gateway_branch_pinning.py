@@ -22,11 +22,11 @@ from datetime import datetime, timezone
 
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-from claude_unlimited.config import Pool, Profile, Settings, load_pool, save_pool
-from claude_unlimited.gateway import Gateway
-from claude_unlimited.router import ProfileState
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.gateway as gateway_module
+from tokenwell.config import Pool, Profile, Settings, load_pool, save_pool
+from tokenwell.gateway import Gateway
+from tokenwell.router import ProfileState
+from tokenwell.upstream import UpstreamResponse
 
 
 class FakeConnection:
@@ -56,12 +56,12 @@ HEALTHY = {"anthropic-ratelimit-unified-5h-utilization": "0.1",
 
 @pytest.fixture
 def pool_env(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
     monkeypatch.setattr(gateway_module, "secret_store", FakeSecretStore({}))
     return tmp_path
 
@@ -1300,7 +1300,7 @@ def test_agents_moved_off_an_unavailable_account_are_logged_and_notified_once(po
     for ag in agents:
         assert serve(gw, hdrs(agent=ag)).profile_id == "b"
 
-    import claude_unlimited.activity as activity_module
+    import tokenwell.activity as activity_module
     moves = [e for e in activity_module.list_events(limit=100) if "Agent moved A → B" in e.text]
     assert len(moves) == 2                    # one per agent that actually moved
     assert notified.count("rotated") == 1     # one per account, not per agent
@@ -1322,7 +1322,7 @@ def test_the_request_body_is_not_parsed_when_nothing_needs_it(pool_env, monkeypa
     longer reads the requested model either — a spent Fable week moves the
     whole session, whatever the model — so plain rotation parses nothing,
     even with the leave-on-Fable switches on."""
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     calls = _count_body_parses(monkeypatch)
     save_pool(Pool(profiles=[prof("a", leave_on_fable_limit=True), prof("b")],
@@ -1386,7 +1386,7 @@ def test_a_repinned_agent_starts_its_time_on_the_new_account_from_zero(pool_env,
 # ---- an app that is not Claude Code ------------------------------------------
 
 def app_hdrs(session="cv-worker-1"):
-    from claude_unlimited.project_attribution import APP_SESSION_HEADER
+    from tokenwell.project_attribution import APP_SESSION_HEADER
     return {APP_SESSION_HEADER: session}
 
 
@@ -1468,7 +1468,7 @@ def test_taking_over_another_account_replaces_the_override(pool_env):
 # ---- "leave this profile when its Fable limit is spent" (issue #2) ----------
 
 def _spend_fable_on(gw, profile_id, percent=100.0):
-    from claude_unlimited.observation import ModelWindow
+    from tokenwell.observation import ModelWindow
 
     with gw._lock:
         gw._runtime[profile_id].model_usage = (
@@ -1494,7 +1494,7 @@ def test_the_resolved_switch_survives_the_per_tick_runtime_rebuild(pool_env):
     (first seen, and every later tick). A field missing from either is
     silently dropped a second later — the trap that has already lost
     model_usage, the credit balance and blocked_models."""
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     save_pool(Pool(profiles=[_leaving("a"), prof("b")], settings=Settings()))
     gw = healthy_gateway()
@@ -1525,7 +1525,7 @@ def test_a_spent_fable_week_moves_the_whole_session_when_the_switch_is_on(pool_e
     # ...and it stays there (sticky on the new account), rather than bouncing.
     assert _serve_model(gw, hdrs(), "claude-sonnet-5").profile_id == "b"
 
-    import claude_unlimited.activity as activity_module
+    import tokenwell.activity as activity_module
     texts = [e.text for e in activity_module.list_events(limit=50)]
     assert any("A has spent its Fable weekly limit — handed over to B" in t for t in texts)
     assert not any(t.startswith("Rotated A") for t in texts), "it did not run out; its Fable week did"
@@ -1541,7 +1541,7 @@ def test_with_the_switch_off_a_spent_fable_week_changes_nothing(pool_env):
 
 
 def test_the_global_override_makes_a_profile_leave_whose_own_switch_is_off(pool_env):
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
 
     save_pool(Pool(profiles=[prof("a", priority=1), prof("b", priority=2)],
                    settings=Settings(fable_limit_all_profiles=True)))
@@ -1569,7 +1569,7 @@ def test_a_pinned_branch_MOVES_when_its_account_has_spent_its_fable_week(pool_en
     again = _serve_model(gw, hdrs(agent="ag1"), "claude-fable-5-1", distribute=True)
     assert again.profile_id == moved.profile_id
 
-    import claude_unlimited.activity as activity_module
+    import tokenwell.activity as activity_module
     moves = [e for e in activity_module.list_events(limit=50) if e.text.startswith("Agent moved")]
     assert moves and "has spent its Fable weekly limit" in (moves[0].meta or "")
 
@@ -1612,7 +1612,7 @@ def test_an_explicit_profile_pin_is_honoured_even_when_that_account_must_leave(p
         result = _serve_model(gw, hdrs(), "claude-fable-5-1", forced_profile_id="a")
         assert result.profile_id == "a"
 
-    import claude_unlimited.activity as activity_module
+    import tokenwell.activity as activity_module
     notes = [e for e in activity_module.list_events(limit=50)
              if e.text == "A has spent its Fable weekly limit"]
     assert len(notes) == 1
@@ -1630,7 +1630,7 @@ def test_take_over_is_honoured_even_when_that_account_must_leave(pool_env):
         assert _serve_model(gw, hdrs(), "claude-opus-5").profile_id == "a"
     assert gw._manual_profile_id == "a", "a spent Fable week is not 'stopped being usable'"
 
-    import claude_unlimited.activity as activity_module
+    import tokenwell.activity as activity_module
     notes = [e for e in activity_module.list_events(limit=50)
              if e.text == "A has spent its Fable weekly limit"]
     assert len(notes) == 1
@@ -1659,7 +1659,7 @@ def test_with_no_alternative_the_session_stays_and_is_served_anyway(pool_env):
     for _ in range(3):
         assert _serve_model(gw, hdrs(), "claude-opus-5").profile_id == "a"
 
-    import claude_unlimited.activity as activity_module
+    import tokenwell.activity as activity_module
     notes = [e for e in activity_module.list_events(limit=50)
              if e.text == "A has spent its Fable weekly limit"]
     assert len(notes) == 1
@@ -1691,7 +1691,7 @@ def test_the_pinned_session_note_is_repeated_for_the_next_spent_week(pool_env):
     _serve_model(gw, hdrs(), "claude-opus-5", forced_profile_id="a")
     _serve_model(gw, hdrs(), "claude-opus-5", forced_profile_id="a")
 
-    import claude_unlimited.activity as activity_module
+    import tokenwell.activity as activity_module
     notes = [e for e in activity_module.list_events(limit=50)
              if e.text == "A has spent its Fable weekly limit"]
     assert len(notes) == 2
@@ -1700,7 +1700,7 @@ def test_the_pinned_session_note_is_repeated_for_the_next_spent_week(pool_env):
 @pytest.mark.parametrize("distribute", [False, True])
 def test_claude_effort_mapping_reuses_branch_parse(pool_env, monkeypatch, distribute):
     import json
-    from claude_unlimited.config import Settings
+    from tokenwell.config import Settings
     rows = [{"claude_model": "claude-fable-5-1", "claude_effort": "medium"},
             {"claude_model": "claude-fable-5-1", "source_effort": "max", "claude_effort": "low"}]
     save_pool(Pool(profiles=[prof("a")], settings=Settings(model_parity=rows)))

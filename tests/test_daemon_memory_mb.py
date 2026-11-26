@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import claude_unlimited.daemon as daemon
+import tokenwell.daemon as daemon
 
 # `resource` is POSIX-only and daemon.py imports it conditionally, so on
 # Windows `daemon.resource` does not exist at all and these two fail at the

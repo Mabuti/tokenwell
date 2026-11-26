@@ -1,4 +1,4 @@
-from claude_unlimited import placeholder_token as pt
+from tokenwell import placeholder_token as pt
 
 
 def test_get_or_create_is_stable_across_calls(tmp_path, monkeypatch):

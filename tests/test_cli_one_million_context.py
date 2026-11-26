@@ -18,7 +18,7 @@ import json
 
 import pytest
 
-from claude_unlimited.context_window import (
+from tokenwell.context_window import (
     ASSUME_FIRST_PARTY_ENV,
     DISABLE_1M_ENV,
     ONE_M_VERIFIED_MIN_CLIENT,
@@ -26,7 +26,7 @@ from claude_unlimited.context_window import (
     _one_million_decision,
     _parse_client_version,
 )
-from claude_unlimited.config import Profile
+from tokenwell.config import Profile
 
 VERIFIED = (2, 1, 278)
 
@@ -202,7 +202,7 @@ def test_force_1m_still_yields_to_the_users_own_environment():
 
 
 def test_force_1m_is_a_valid_setting_value():
-    from claude_unlimited.config import CONTEXT_1M_MODES
+    from tokenwell.config import CONTEXT_1M_MODES
     assert "force_1m" in CONTEXT_1M_MODES
 
 
@@ -257,8 +257,8 @@ def test_the_settings_endpoint_publishes_the_decision_reason(monkeypatch, tmp_pa
     """The brief requires a published reason. The decision is made inside
     `cu code`, in another process, so the dashboard gets the same pure
     function run over the same pool."""
-    import claude_unlimited.daemon as daemon
-    from claude_unlimited.config import Pool, Settings
+    import tokenwell.daemon as daemon
+    from tokenwell.config import Pool, Settings
 
     monkeypatch.setattr(daemon, "_cached_client_version", lambda: VERIFIED)
 
@@ -287,8 +287,8 @@ def test_the_settings_endpoint_publishes_the_decision_reason(monkeypatch, tmp_pa
 
 
 def test_the_preview_flags_an_assumed_window_and_a_codex_only_pool(monkeypatch):
-    import claude_unlimited.daemon as daemon
-    from claude_unlimited.config import Pool, Settings
+    import tokenwell.daemon as daemon
+    from tokenwell.config import Pool, Settings
 
     monkeypatch.setattr(daemon, "_cached_client_version", lambda: VERIFIED)
     codex_only = Pool(profiles=[Profile(id="c", name="C", kind="codex", automatic=True,
@@ -310,8 +310,8 @@ def test_the_preview_flags_an_assumed_window_and_a_codex_only_pool(monkeypatch):
 
 
 def test_the_launch_note_names_each_codex_account_and_its_window():
-    import claude_unlimited.cli as cli
-    from claude_unlimited.config import Pool, Settings
+    import tokenwell.cli as cli
+    from tokenwell.config import Pool, Settings
 
     codex = Profile(id="c", name="Work ChatGPT", kind="codex", automatic=True,
                     auth_mode="chatgpt_subscription")
@@ -335,7 +335,7 @@ def test_the_launch_note_names_each_codex_account_and_its_window():
 
 
 def test_the_codex_only_launch_note_names_the_variant_selection_widgets():
-    import claude_unlimited.cli as cli
+    import tokenwell.cli as cli
 
     note = cli._ONE_M_REASON_NOTES["codex_only_route"]
     assert "ordinary GPT/Codex models" in note
@@ -346,8 +346,8 @@ def test_the_codex_only_launch_note_names_the_variant_selection_widgets():
 
 
 def test_the_launch_note_shows_each_distinct_resolved_budget():
-    import claude_unlimited.cli as cli
-    from claude_unlimited.config import Pool, Profile, Settings
+    import tokenwell.cli as cli
+    from tokenwell.config import Pool, Profile, Settings
 
     codex = Profile(id="c", name="Mixed", kind="codex", automatic=True,
                     auth_mode="chatgpt_subscription")
@@ -372,7 +372,7 @@ def test_the_launch_note_shows_each_distinct_resolved_budget():
 
 
 def test_codex_budget_summary_has_no_smallest_of_these_label():
-    import claude_unlimited.cli as cli
+    import tokenwell.cli as cli
 
     assert cli._codex_budget_summary({"budget": 226_400}) == "~226K"
     assert cli._codex_budget_summary({
@@ -394,11 +394,11 @@ def test_codex_budget_summary_has_no_smallest_of_these_label():
 def test_the_client_version_is_not_reread_on_every_poll(monkeypatch):
     """An open dashboard polls /api/settings once a second; forking `claude
     --version` that often would be absurd."""
-    import claude_unlimited.daemon as daemon
+    import tokenwell.daemon as daemon
 
     calls = []
     monkeypatch.setattr(daemon, "_CLIENT_VERSION_CACHE", {})
-    monkeypatch.setattr("claude_unlimited.cli._installed_client_version",
+    monkeypatch.setattr("tokenwell.cli._installed_client_version",
                         lambda: calls.append(1) or VERIFIED)
     for _ in range(5):
         assert daemon._cached_client_version() == VERIFIED
@@ -408,11 +408,11 @@ def test_the_client_version_is_not_reread_on_every_poll(monkeypatch):
 def test_a_missing_client_is_cached_too(monkeypatch):
     """None is a real answer ("not installed"), not a cache miss — otherwise
     every poll re-forks for a client that is not there."""
-    import claude_unlimited.daemon as daemon
+    import tokenwell.daemon as daemon
 
     calls = []
     monkeypatch.setattr(daemon, "_CLIENT_VERSION_CACHE", {})
-    monkeypatch.setattr("claude_unlimited.cli._installed_client_version",
+    monkeypatch.setattr("tokenwell.cli._installed_client_version",
                         lambda: calls.append(1) or None)
     for _ in range(4):
         assert daemon._cached_client_version() is None
@@ -428,7 +428,7 @@ def test_the_client_is_found_outside_PATH(monkeypatch, tmp_path):
     installed — a wrong answer, not a missing one."""
     import os
     import types
-    import claude_unlimited.cli as cli
+    import tokenwell.cli as cli
 
     # A shebang script is only directly executable on POSIX; Windows needs a
     # real PE binary to run one natively. Since _parse_client_version has its
@@ -461,7 +461,7 @@ def test_fallback_paths_use_the_real_installed_filename():
     on Windows and the client silently reads as unverified whenever PATH is
     minimal (e.g. running under Task Scheduler) — the exact bug this fallback
     list exists to prevent."""
-    import claude_unlimited.cli as cli
+    import tokenwell.cli as cli
 
     suffix = ".exe" if os.name == "nt" else ""
     home_based = cli._CLAUDE_FALLBACK_PATHS[:2]
@@ -469,7 +469,7 @@ def test_fallback_paths_use_the_real_installed_filename():
 
 
 def test_no_client_anywhere_reads_as_unverified(monkeypatch, tmp_path):
-    import claude_unlimited.cli as cli
+    import tokenwell.cli as cli
 
     monkeypatch.setattr(cli.shutil, "which", lambda name: None)
     monkeypatch.setattr(cli, "_CLAUDE_FALLBACK_PATHS", (tmp_path / "nope",))
@@ -480,8 +480,8 @@ def test_no_client_anywhere_reads_as_unverified(monkeypatch, tmp_path):
 def test_force_1m_is_the_default_and_the_fallback(tmp_path, monkeypatch):
     """A fresh install, a config that never chose, and a config holding a
     value this build does not know all mean Force 1M."""
-    from claude_unlimited import config
-    from claude_unlimited.config import Settings
+    from tokenwell import config
+    from tokenwell.config import Settings
 
     assert Settings().context_1m == "force_1m"
     monkeypatch.setattr(config, "CONFIG_FILE", tmp_path / "config.json")

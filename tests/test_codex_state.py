@@ -7,11 +7,11 @@ import json
 
 import pytest
 
-import claude_unlimited.openai_bridge as bridge_module
-from claude_unlimited import codex_state
-from claude_unlimited.openai_bridge import ConversationContext, run
-from claude_unlimited.openai_models import OpenAIModelTarget
-from claude_unlimited.openai_translate import (ResponseTranslator, anthropic_request_to_openai,
+import tokenwell.openai_bridge as bridge_module
+from tokenwell import codex_state
+from tokenwell.openai_bridge import ConversationContext, run
+from tokenwell.openai_models import OpenAIModelTarget
+from tokenwell.openai_translate import (ResponseTranslator, anthropic_request_to_openai,
                                                assistant_anchors, user_turn_index)
 
 from test_openai_bridge import (FakeHTTPResponse, _cred, _install_fake_connections, _sse_body,
@@ -205,7 +205,7 @@ def test_without_a_conversation_every_request_still_gets_fresh_ids(monkeypatch):
 
 def test_the_gateway_passes_the_claude_code_conversation_to_the_bridge():
     import inspect
-    from claude_unlimited.gateway import Gateway
+    from tokenwell.gateway import Gateway
     src = inspect.getsource(Gateway._handle_codex)
     assert "project_attribution.branch_key(headers, body)" in src
     assert "context=openai_bridge.ConversationContext(" in src

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from claude_unlimited.observation import AuthInvalid, ProviderUnavailable, QuotaExhausted, ShortRateLimit, Unknown, UsageSnapshot
-from claude_unlimited.openai_observation import ALLOWED_HEADERS, classify, parse_credits
+from tokenwell.observation import AuthInvalid, ProviderUnavailable, QuotaExhausted, ShortRateLimit, Unknown, UsageSnapshot
+from tokenwell.openai_observation import ALLOWED_HEADERS, classify, parse_credits
 
 NOW = datetime(2026, 8, 24, 0, 0, tzinfo=timezone.utc)
 

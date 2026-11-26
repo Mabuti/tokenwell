@@ -5,8 +5,8 @@ import urllib.error
 
 import pytest
 
-import claude_unlimited.anthropic_oauth as oauth_module
-from claude_unlimited.anthropic_oauth import (
+import tokenwell.anthropic_oauth as oauth_module
+from tokenwell.anthropic_oauth import (
     AccountProfile,
     CredentialImportError,
     ProfileLookupError,
@@ -23,8 +23,8 @@ def test_isolated_macos_keychain_service_matches_the_algorithm_claude_code_actua
     # sha256(path).hexdigest()[:8]. A failure here means Claude Code changed
     # how it derives the service name, and the isolated-login fallback needs
     # re-deriving rather than just re-pinning.
-    config_dir = "/home/example-user/.claude-unlimited/claude-accounts/aaaaaaaaaaaaaaaa"
-    assert isolated_macos_keychain_service(config_dir) == "Claude Code-credentials-b5f03c19"
+    config_dir = "/home/example-user/.tokenwell/claude-accounts/aaaaaaaaaaaaaaaa"
+    assert isolated_macos_keychain_service(config_dir) == "Claude Code-credentials-b36ec490"
 
 
 def test_reads_credentials_from_file_when_present(tmp_path, monkeypatch):
@@ -309,7 +309,7 @@ def test_fetch_account_profile_gives_a_friendly_message_for_setup_token_scope_er
     message = str(exc_info.value)
     assert "claude setup-token" in message
     assert "Import current login" in message
-    assert "claude-unlimited add-account" in message
+    assert "tokenwell add-account" in message
     # Never leak the raw Anthropic error JSON into what the user sees.
     assert "permission_error" not in message
     assert "request_id" not in message

@@ -4,9 +4,9 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.anthropic_oauth as anthropic_oauth
-import claude_unlimited.daemon as daemon
-import claude_unlimited.profiles as profile_repo
+import tokenwell.anthropic_oauth as anthropic_oauth
+import tokenwell.daemon as daemon
+import tokenwell.profiles as profile_repo
 
 
 class FakeSecretStore:
@@ -30,11 +30,11 @@ class FakeSecretStore:
 def env(monkeypatch, tmp_path):
     store = FakeSecretStore()
     monkeypatch.setattr(profile_repo, "secret_store", store)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.activity.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.activity.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.activity.ACTIVITY_FILE", tmp_path / "activity.jsonl")
     return store
 
 
@@ -73,7 +73,7 @@ def test_upsert_oauth_profile_creates_when_no_existing_account(env):
     assert profile.name == "X"
     assert profile.plan == "pro"
 
-    import claude_unlimited.oauth_credential as oauth_credential
+    import tokenwell.oauth_credential as oauth_credential
     stored = oauth_credential.decode(env.get_token(profile.id))
     assert stored.access_token == "tok-original-long"
     assert stored.refresh_token == "ref-1"
@@ -102,7 +102,7 @@ def test_upsert_oauth_profile_refreshes_credential_and_plan_when_account_exists(
     assert second.id == first.id  # same Profile, not a duplicate
     assert second.plan == "max"  # plan kept current on refresh, not just on first add
 
-    import claude_unlimited.oauth_credential as oauth_credential
+    import tokenwell.oauth_credential as oauth_credential
     stored = oauth_credential.decode(env.get_token(first.id))
     assert stored.access_token == "tok-2-long"
     assert stored.refresh_token == "ref-2"
@@ -355,7 +355,7 @@ def test_update_credential_replaces_keychain_token_only(env):
 
 
 def test_create_profile_and_update_credential_store_refresh_token_and_expiry(env):
-    import claude_unlimited.oauth_credential as oauth_credential
+    import tokenwell.oauth_credential as oauth_credential
 
     p = profile_repo.create_profile(name="X", kind="oauth", credential="tok-1-long", account_uuid="uuid-1",
                                      refresh_token="ref-1", expires_at=1000)

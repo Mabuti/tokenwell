@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-import claude_unlimited.oauth_login as login_module
-from claude_unlimited.oauth_login import (
+import tokenwell.oauth_login as login_module
+from tokenwell.oauth_login import (
     OAuthLoginError,
     refresh_access_token,
 )

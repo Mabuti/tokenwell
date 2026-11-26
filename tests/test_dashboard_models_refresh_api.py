@@ -15,14 +15,14 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.model_catalogue as model_catalogue
+import tokenwell.daemon as daemon
+import tokenwell.model_catalogue as model_catalogue
 
 
 @pytest.fixture
 def running_server(monkeypatch, tmp_path):
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     server = daemon.make_server(host="127.0.0.1", port=0)
     port = server.server_address[1]
     t = threading.Thread(target=server.serve_forever, daemon=True)
@@ -103,8 +103,8 @@ def test_model_map_endpoint_returns_the_wire_keys_the_dashboard_reads(running_se
 
 
 def test_parity_grid_endpoint_matches_saved_settings(running_server):
-    from claude_unlimited.config import update_settings
-    from claude_unlimited.openai_models import parity_grid
+    from tokenwell.config import update_settings
+    from tokenwell.openai_models import parity_grid
     rows = [{"claude_model": "claude-fable-5-1", "effort": "follow"},
             {"claude_model": "claude-fable-5-1", "source_effort": "max", "effort": "low"}]
     update_settings(model_parity=rows)

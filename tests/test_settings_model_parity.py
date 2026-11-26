@@ -5,7 +5,7 @@ by an imported bundle without the same checks the API applies.
 """
 import pytest
 
-from claude_unlimited.config import _validated_model_parity, validated_settings_changes
+from tokenwell.config import _validated_model_parity, validated_settings_changes
 
 
 def test_a_valid_map_passes_through():

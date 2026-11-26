@@ -1,6 +1,6 @@
 """POST /api/settings/port's user-facing failures must be localizable.
 
-CONTRIBUTING: "Every user-facing string lives in claude_unlimited/locales/
+CONTRIBUTING: "Every user-facing string lives in tokenwell/locales/
 *.json". The endpoint's `message` field stays English on purpose — it also
 serves non-dashboard API callers, and curl output is not a localized surface
 — so the Dashboard translates the stable error CODE instead. These tests pin
@@ -10,8 +10,8 @@ every locale file, and app.js maps exactly those codes.
 import json
 import re
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.i18n as i18n
+import tokenwell.daemon as daemon
+import tokenwell.i18n as i18n
 
 # The error codes POST /api/settings/port can put in its JSON body.
 PORT_ERROR_CODES = ("invalid_port", "port_in_use")

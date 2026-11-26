@@ -7,7 +7,7 @@ validated_settings_changes()'s handling of `launchers` (validated) and
 `port` (rejected, pointing at POST /api/settings/port)."""
 import pytest
 
-from claude_unlimited import config
+from tokenwell import config
 
 
 def _isolate(monkeypatch, tmp_path):
@@ -24,7 +24,7 @@ def test_launcher_kinds_registry_has_claude_and_codex():
     assert set(by_name) == {"claude", "codex"}
     assert by_name["claude"].default_command == "claude"
     assert by_name["claude"].label_key == "settings.launchers.claude"
-    assert by_name["claude"].used_by == "claude-unlimited code"
+    assert by_name["claude"].used_by == "tokenwell code"
     assert by_name["codex"].default_command == "codex"
     assert by_name["codex"].label_key == "settings.launchers.codex"
 
@@ -133,35 +133,35 @@ def test_split_command_unbalanced_quote_raises_value_error_windows(monkeypatch):
 
 def test_resolve_port_explicit_flag_wins_over_everything(tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", "6000")
+    monkeypatch.setenv("TOKENWELL_PORT", "6000")
     config.save_pool(config.Pool(settings=config.Settings(port=7000)))
     assert config.resolve_port(9999) == 9999
 
 
 def test_resolve_port_env_wins_over_settings_and_default(tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", "6000")
+    monkeypatch.setenv("TOKENWELL_PORT", "6000")
     config.save_pool(config.Pool(settings=config.Settings(port=7000)))
     assert config.resolve_port(None) == 6000
 
 
 def test_resolve_port_settings_wins_over_default(tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.delenv("CLAUDE_UNLIMITED_PORT", raising=False)
+    monkeypatch.delenv("TOKENWELL_PORT", raising=False)
     config.save_pool(config.Pool(settings=config.Settings(port=7000)))
     assert config.resolve_port(None) == 7000
 
 
 def test_resolve_port_falls_back_to_default_port(tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.delenv("CLAUDE_UNLIMITED_PORT", raising=False)
+    monkeypatch.delenv("TOKENWELL_PORT", raising=False)
     # No config.json at all yet.
     assert config.resolve_port(None) == config._default_port()
 
 
 def test_resolve_port_ignores_non_numeric_env(tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", "not-a-number")
+    monkeypatch.setenv("TOKENWELL_PORT", "not-a-number")
     config.save_pool(config.Pool(settings=config.Settings(port=7000)))
     assert config.resolve_port(None) == 7000
 
@@ -169,7 +169,7 @@ def test_resolve_port_ignores_non_numeric_env(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 # resolve_port(): range validation. MIN_PORT/MAX_PORT are the SAME pair
 # POST /api/settings/port enforces (daemon.py imports them), so a port can no
-# longer sail through CLAUDE_UNLIMITED_PORT or --port that the Dashboard
+# longer sail through TOKENWELL_PORT or --port that the Dashboard
 # would reject out of hand.
 # ---------------------------------------------------------------------------
 
@@ -179,21 +179,21 @@ def test_resolve_port_out_of_range_env_falls_back_to_settings(bad, tmp_path, mon
     # a service unit or a shell profile, not a place anyone reads errors, so a
     # bad value there must not stop a daemon that worked yesterday.
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", bad)
+    monkeypatch.setenv("TOKENWELL_PORT", bad)
     config.save_pool(config.Pool(settings=config.Settings(port=7000)))
     assert config.resolve_port(None) == 7000
 
 
 def test_resolve_port_out_of_range_env_falls_back_to_default_when_no_settings(tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", "99999")
+    monkeypatch.setenv("TOKENWELL_PORT", "99999")
     assert config.resolve_port(None) == config._default_port()
 
 
 @pytest.mark.parametrize("edge", [config.MIN_PORT, config.MAX_PORT, 5000])
 def test_resolve_port_accepts_in_range_env(edge, tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", str(edge))
+    monkeypatch.setenv("TOKENWELL_PORT", str(edge))
     config.save_pool(config.Pool(settings=config.Settings(port=7000)))
     assert config.resolve_port(None) == edge
 
@@ -203,7 +203,7 @@ def test_resolve_port_out_of_range_explicit_raises(bad, tmp_path, monkeypatch):
     # An explicit --port is the one value a human definitely typed, so it is
     # an error rather than a silent fallback onto a port they never asked for.
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.delenv("CLAUDE_UNLIMITED_PORT", raising=False)
+    monkeypatch.delenv("TOKENWELL_PORT", raising=False)
     config.save_pool(config.Pool(settings=config.Settings(port=7000)))
     with pytest.raises(ValueError) as excinfo:
         config.resolve_port(bad)
@@ -214,7 +214,7 @@ def test_resolve_port_out_of_range_explicit_raises(bad, tmp_path, monkeypatch):
 @pytest.mark.parametrize("edge", [config.MIN_PORT, config.MAX_PORT, 9999])
 def test_resolve_port_accepts_in_range_explicit(edge, tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.setenv("CLAUDE_UNLIMITED_PORT", "6000")
+    monkeypatch.setenv("TOKENWELL_PORT", "6000")
     config.save_pool(config.Pool(settings=config.Settings(port=7000)))
     assert config.resolve_port(edge) == edge
 
@@ -272,6 +272,6 @@ def test_resolve_port_falls_back_when_settings_port_is_out_of_range(tmp_path, mo
     the user to hand-edit — so an out-of-range value there is reachable, and
     must fall back rather than be handed to bind()."""
     _isolate(monkeypatch, tmp_path)
-    monkeypatch.delenv("CLAUDE_UNLIMITED_PORT", raising=False)
+    monkeypatch.delenv("TOKENWELL_PORT", raising=False)
     config.save_pool(config.Pool(settings=config.Settings(port=99999)))
     assert config.resolve_port(None) == config._default_port()

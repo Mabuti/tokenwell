@@ -13,11 +13,11 @@ from datetime import datetime, timezone
 
 import pytest
 
-import claude_unlimited.activity as activity
-import claude_unlimited.observation as observation
-import claude_unlimited.openai_observation as openai_observation
-import claude_unlimited.usage_probe as usage_probe
-from claude_unlimited.usage_probe import Candidate, ProbeResult, Scheduler
+import tokenwell.activity as activity
+import tokenwell.observation as observation
+import tokenwell.openai_observation as openai_observation
+import tokenwell.usage_probe as usage_probe
+from tokenwell.usage_probe import Candidate, ProbeResult, Scheduler
 
 # Response shapes as the real endpoints returned them (2026-09-15), with every
 # identifying field removed.
@@ -272,19 +272,19 @@ class FakeSecretStore:
 
 @pytest.fixture
 def daemon_env(monkeypatch, tmp_path):
-    import claude_unlimited.daemon as daemon
-    import claude_unlimited.gateway as gateway_module
-    import claude_unlimited.profiles as profile_repo
+    import tokenwell.daemon as daemon
+    import tokenwell.gateway as gateway_module
+    import tokenwell.profiles as profile_repo
 
     store = FakeSecretStore()
     monkeypatch.setattr(profile_repo, "secret_store", store)
     monkeypatch.setattr(gateway_module, "secret_store", store)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     monkeypatch.setattr(activity, "APP_DIR", tmp_path)
     monkeypatch.setattr(activity, "ACTIVITY_FILE", tmp_path / "activity.jsonl")
-    monkeypatch.setattr("claude_unlimited.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
-    monkeypatch.setattr("claude_unlimited.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
+    monkeypatch.setattr("tokenwell.gateway.runtime_state.RUNTIME_STATE_FILE", tmp_path / "runtime_state.json")
+    monkeypatch.setattr("tokenwell.gateway.usage_history.USAGE_HISTORY_FILE", tmp_path / "usage_history.jsonl")
     gw = gateway_module.Gateway(transport=lambda req: None)
     monkeypatch.setattr(daemon, "_gateway", gw)
     scheduler = Scheduler(state_file=tmp_path / "usage_probe_state.json")
@@ -313,7 +313,7 @@ def test_a_tick_reads_usage_into_the_dashboard_numbers_only_while_active(daemon_
 
 def test_a_tick_sends_nothing_when_the_setting_is_off_or_for_api_key_profiles(daemon_env, monkeypatch):
     daemon, _gw, scheduler, profile_repo = daemon_env
-    from claude_unlimited.config import update_settings
+    from tokenwell.config import update_settings
 
     profile_repo.create_profile(name="Console", kind="api", credential="sk-ant-api-12345678")
     oauth = profile_repo.create_profile(name="Max", kind="oauth", credential="sk-ant-12345678", account_uuid="u1")
@@ -342,7 +342,7 @@ def test_a_tick_sends_nothing_when_the_setting_is_off_or_for_api_key_profiles(da
 # ---------------------------------------------------------------------------
 
 def test_codex_model_usage_becomes_binary_buckets():
-    from claude_unlimited.usage_probe import codex_model_windows
+    from tokenwell.usage_probe import codex_model_windows
 
     windows = codex_model_windows({"model_usage": {
         "gpt-6-astra": {"available": False, "available_at": 1790000000,
@@ -360,7 +360,7 @@ def test_codex_model_usage_becomes_binary_buckets():
 
 
 def test_codex_model_usage_tolerates_the_shapes_the_endpoint_really_returns():
-    from claude_unlimited.usage_probe import codex_model_windows
+    from tokenwell.usage_probe import codex_model_windows
 
     # Verified live on a Plus account: an unconstrained model reports
     # available_at null. Nothing here may raise.
@@ -376,7 +376,7 @@ def test_codex_model_usage_tolerates_the_shapes_the_endpoint_really_returns():
 
 
 def test_codex_available_at_accepts_epoch_or_iso():
-    from claude_unlimited.usage_probe import codex_model_windows
+    from tokenwell.usage_probe import codex_model_windows
 
     epoch = codex_model_windows({"model_usage": {
         "m": {"available": False, "available_at": 1790000000}}})[0]
@@ -396,7 +396,7 @@ def test_codex_available_at_accepts_epoch_or_iso():
 def test_a_codex_probe_carries_the_model_windows(monkeypatch):
     """The parser existing is not the point — fetch_codex_usage has to attach
     it, the way fetch_anthropic_usage does. That wiring is what was missing."""
-    from claude_unlimited import usage_probe
+    from tokenwell import usage_probe
 
     body = {"rate_limit": {"primary_window": {"used_percent": 10.0,
                                                "limit_window_seconds": 18000}},
@@ -423,7 +423,7 @@ def test_a_codex_probe_carries_the_model_windows(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_a_requested_profile_skips_the_interval_but_not_the_backoff(tmp_path):
-    from claude_unlimited import usage_probe
+    from tokenwell import usage_probe
 
     clock = {"now": 10_000.0}
     sched = usage_probe.Scheduler(clock=lambda: clock["now"],
@@ -447,7 +447,7 @@ def test_a_requested_profile_skips_the_interval_but_not_the_backoff(tmp_path):
 
 
 def test_a_requested_profile_still_respects_the_provider_pause(tmp_path):
-    from claude_unlimited import usage_probe
+    from tokenwell import usage_probe
 
     clock = {"now": 20_000.0}
     sched = usage_probe.Scheduler(clock=lambda: clock["now"],
@@ -465,7 +465,7 @@ def test_a_requested_profile_still_respects_the_provider_pause(tmp_path):
 def test_an_idle_pool_reads_nothing_even_when_asked(tmp_path):
     """No new polling (invariant 2): the re-read rides the existing tick, and
     that tick does not run while nobody is working."""
-    from claude_unlimited import usage_probe
+    from tokenwell import usage_probe
 
     clock = {"now": 30_000.0}
     sched = usage_probe.Scheduler(clock=lambda: clock["now"],

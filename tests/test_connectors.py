@@ -1,7 +1,7 @@
 import dataclasses
 
-import claude_unlimited.connectors as connectors
-from claude_unlimited.config import Profile
+import tokenwell.connectors as connectors
+from tokenwell.config import Profile
 
 
 def test_every_registered_kind_matches_its_own_spec_kind_field():

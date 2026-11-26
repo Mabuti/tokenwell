@@ -3,8 +3,8 @@ import types
 import pytest
 from datetime import datetime, timedelta, timezone
 
-import claude_unlimited.cli as cli
-from claude_unlimited.config import Profile
+import tokenwell.cli as cli
+from tokenwell.config import Profile
 
 
 def _profiles():
@@ -98,13 +98,13 @@ def code_env(monkeypatch, tmp_path):
         return types.SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(cli, "_run_tool", _run_tool)
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     return execs
 
 
 def test_code_with_profile_flag_fetches_a_session_token_not_the_placeholder_token(monkeypatch, code_env):
-    from claude_unlimited.config import Pool, Profile, save_pool
+    from tokenwell.config import Pool, Profile, save_pool
     save_pool(Pool(profiles=[Profile(id="a", name="Alice", kind="oauth", enabled=True)]))
 
     monkeypatch.setattr(cli, "_fetch_session_token", lambda host, port, profile_id, timeout=2.0: f"session-tok-for-{profile_id}")
@@ -122,7 +122,7 @@ def test_code_with_profile_flag_fetches_a_session_token_not_the_placeholder_toke
 
 
 def test_code_with_unknown_profile_flag_errors_without_launching(monkeypatch, code_env, capsys):
-    from claude_unlimited.config import Pool, Profile, save_pool
+    from tokenwell.config import Pool, Profile, save_pool
     save_pool(Pool(profiles=[Profile(id="a", name="Alice", kind="oauth", enabled=True)]))
 
     assert cli.code(4317, [], profile_arg="does-not-exist") == 1
@@ -132,7 +132,7 @@ def test_code_with_unknown_profile_flag_errors_without_launching(monkeypatch, co
 
 def test_code_with_one_profile_never_prompts(monkeypatch, code_env):
     # Nothing to pick between, so the picker must not block on a single choice.
-    from claude_unlimited.config import Pool, Profile, save_pool
+    from tokenwell.config import Pool, Profile, save_pool
     save_pool(Pool(profiles=[Profile(id="a", name="Alice", kind="oauth", enabled=True)]))
 
     def boom(prompt):
@@ -147,7 +147,7 @@ def test_code_with_one_profile_never_prompts(monkeypatch, code_env):
 
 
 def test_code_non_interactive_stdin_never_prompts_even_with_multiple_profiles(monkeypatch, code_env):
-    from claude_unlimited.config import Pool, Profile, save_pool
+    from tokenwell.config import Pool, Profile, save_pool
     save_pool(Pool(profiles=[
         Profile(id="a", name="Alice", kind="oauth", enabled=True),
         Profile(id="b", name="Bob", kind="oauth", enabled=True),
@@ -165,7 +165,7 @@ def test_code_non_interactive_stdin_never_prompts_even_with_multiple_profiles(mo
 
 
 def _two_profiles():
-    from claude_unlimited.config import Pool, Profile, save_pool
+    from tokenwell.config import Pool, Profile, save_pool
     save_pool(Pool(profiles=[
         Profile(id="a", name="Alice", kind="oauth", enabled=True),
         Profile(id="b", name="Bob", kind="oauth", enabled=True),
@@ -215,7 +215,7 @@ def test_the_global_setting_makes_plain_code_distribute(monkeypatch, code_env):
     """Settings → "Balance sessions and subagents across accounts" has to reach the CLI too: the
     daemon would distribute anyway, but the picker below would pin the session
     and silently override it."""
-    from claude_unlimited.config import Pool, Profile, Settings, save_pool
+    from tokenwell.config import Pool, Profile, Settings, save_pool
     save_pool(Pool(profiles=[Profile(id="a", name="Alice", kind="oauth", enabled=True),
                              Profile(id="b", name="Bob", kind="oauth", enabled=True)],
                    settings=Settings(distribute_sessions_default=True)))
@@ -232,7 +232,7 @@ def test_the_global_setting_makes_plain_code_distribute(monkeypatch, code_env):
 
 
 def test_profile_flag_still_overrides_the_global_setting(monkeypatch, code_env):
-    from claude_unlimited.config import Pool, Profile, Settings, save_pool
+    from tokenwell.config import Pool, Profile, Settings, save_pool
     save_pool(Pool(profiles=[Profile(id="a", name="Alice", kind="oauth", enabled=True),
                              Profile(id="b", name="Bob", kind="oauth", enabled=True)],
                    settings=Settings(distribute_sessions_default=True)))
@@ -254,9 +254,9 @@ def test_profile_and_distribute_are_mutually_exclusive_on_the_command_line():
 def test_code_self_heals_the_cli_launchers(monkeypatch, code_env):
     """Running `code` must (best-effort) create any missing CLI launcher — this
     is the reliable path that puts `cu` on PATH after an update, since it runs
-    the freshly-installed code via the claude-unlimited symlink without needing
+    the freshly-installed code via the tokenwell symlink without needing
     the daemon to have restarted."""
-    from claude_unlimited.config import Pool, Profile, save_pool
+    from tokenwell.config import Pool, Profile, save_pool
     save_pool(Pool(profiles=[Profile(id="a", name="Alice", kind="oauth", enabled=True)]))
     monkeypatch.setattr(cli, "_fetch_placeholder_token", lambda host, port, timeout=2.0: "tok")
     monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: True)
@@ -373,7 +373,7 @@ def test_profile_state_suffix_never_raises_on_a_malformed_entry():
 
 
 def test_code_fetches_live_profiles_with_a_one_second_timeout_before_prompting(monkeypatch, code_env):
-    from claude_unlimited.config import Pool, Profile, save_pool
+    from tokenwell.config import Pool, Profile, save_pool
     save_pool(Pool(profiles=[
         Profile(id="a", name="Alice", kind="oauth", enabled=True),
         Profile(id="b", name="Bob", kind="oauth", enabled=True),

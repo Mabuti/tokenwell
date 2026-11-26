@@ -8,14 +8,14 @@ import json
 
 import pytest
 
-import claude_unlimited.gateway as gateway_module
-import claude_unlimited.openai_bridge as bridge_module
-from claude_unlimited import placeholder_token
-from claude_unlimited.config import Pool, save_pool
-from claude_unlimited.gateway import Gateway, is_openai_ingress
-from claude_unlimited.openai_bridge import OpenAIBridgeResult
-from claude_unlimited.router import ProfileState
-from claude_unlimited.upstream import UpstreamResponse
+import tokenwell.gateway as gateway_module
+import tokenwell.openai_bridge as bridge_module
+from tokenwell import placeholder_token
+from tokenwell.config import Pool, save_pool
+from tokenwell.gateway import Gateway, is_openai_ingress
+from tokenwell.openai_bridge import OpenAIBridgeResult
+from tokenwell.router import ProfileState
+from tokenwell.upstream import UpstreamResponse
 
 from test_gateway_openai_ingress import (  # noqa: F401 - pool_env is a fixture
     BODY, CODEX_HEADERS, SSE, Upstream, _codex, _drain, _in, _no_transport, _oauth, _ok, _session,

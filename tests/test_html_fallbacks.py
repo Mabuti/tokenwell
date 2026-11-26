@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 
-STATIC = Path(__file__).resolve().parent.parent / "claude_unlimited"
+STATIC = Path(__file__).resolve().parent.parent / "tokenwell"
 
 
 def test_every_plain_text_fallback_matches_the_english_locale():

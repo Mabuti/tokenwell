@@ -7,9 +7,9 @@ an account was the least accurate.
 """
 from datetime import datetime, timezone
 
-import claude_unlimited.daemon as daemon
-from claude_unlimited.config import Profile
-from claude_unlimited.observation import UsageSnapshot
+import tokenwell.daemon as daemon
+from tokenwell.config import Profile
+from tokenwell.observation import UsageSnapshot
 
 
 def _oauth_profile(**kw):
@@ -170,7 +170,7 @@ def test_a_genuine_auth_failure_is_recorded(monkeypatch):
     # The user-reported bug: an expired account probed via Test connection or
     # Fetch info returned 401, but the Profile stayed "healthy" because the
     # probe discarded everything that was not a usage reading.
-    from claude_unlimited.observation import AuthInvalid
+    from tokenwell.observation import AuthInvalid
     observed = []
     monkeypatch.setattr(daemon._gateway, "_observe",
                         lambda pid, obs, now: observed.append(obs))

@@ -5,8 +5,8 @@ import urllib.request
 
 import pytest
 
-import claude_unlimited.daemon as daemon
-import claude_unlimited.profiles as profile_repo
+import tokenwell.daemon as daemon
+import tokenwell.profiles as profile_repo
 
 
 class FakeSecretStore:
@@ -20,8 +20,8 @@ class FakeSecretStore:
 @pytest.fixture
 def running_server(monkeypatch, tmp_path):
     monkeypatch.setattr(profile_repo, "secret_store", FakeSecretStore())
-    monkeypatch.setattr("claude_unlimited.config.APP_DIR", tmp_path)
-    monkeypatch.setattr("claude_unlimited.config.CONFIG_FILE", tmp_path / "config.json")
+    monkeypatch.setattr("tokenwell.config.APP_DIR", tmp_path)
+    monkeypatch.setattr("tokenwell.config.CONFIG_FILE", tmp_path / "config.json")
     server = daemon.make_server(host="127.0.0.1", port=0)
     port = server.server_address[1]
     t = threading.Thread(target=server.serve_forever, daemon=True)
