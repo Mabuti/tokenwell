@@ -42,6 +42,7 @@ from .config import APP_DIR, CLAUDE_ACCOUNTS_DIR, CODEX_ACCOUNTS_DIR, DEFAULT_SW
 from .daemon import DEFAULT_PORT, LOOPBACK_HOST, run_foreground
 from .openai_models import CLAUDE_TIER_IDS
 from .router import APPROACHING_THRESHOLD_BAND
+from . import splash
 
 # The escalation ladder for stopping a process. SIGKILL is Unix-only — even
 # naming `signal.SIGKILL` raises AttributeError on Windows — so it is included
@@ -179,7 +180,8 @@ def _cli_launcher_status() -> _LauncherStatus:
     return _LauncherStatus(found, missing, cu, hint)
 
 
-def doctor() -> int:
+def doctor(*, quiet: bool = False) -> int:
+    splash.show(port=resolve_port(None), quiet=quiet)
     _banner()
     ok = True
 
@@ -300,7 +302,8 @@ def status() -> int:
     return 0
 
 
-def start(port: int) -> int:
+def start(port: int, *, quiet: bool = False) -> int:
+    splash.show(port=port, quiet=quiet)
     _banner()
     running = _running_version(LOOPBACK_HOST, port)
     if running is not None:
@@ -2768,6 +2771,7 @@ def main(argv=None) -> int:
         epilog="Also available as `cu` — every command works under both names "
                "(e.g. `cu code`, `cu status`, `cu doctor`).")
     parser.add_argument("--version", action="version", version=__version__)
+    parser.add_argument("--quiet", action="store_true", help="suppress the interactive launch mark")
     sub = parser.add_subparsers(dest="cmd")
     # Every --port below defaults to None, not DEFAULT_PORT: argparse's own
     # default can't tell "flag omitted" from "flag given but happened to
@@ -2777,8 +2781,12 @@ def main(argv=None) -> int:
     # precedence (plan §3.4).
     start_p = sub.add_parser("start", help="run the daemon in the foreground")
     start_p.add_argument("--port", type=int, default=None)
+    start_p.add_argument("--quiet", action="store_true", default=argparse.SUPPRESS,
+                         help="suppress the interactive launch mark")
     sub.add_parser("status", help="check whether the daemon is running")
-    sub.add_parser("doctor", help="verify installation and configuration")
+    doctor_p = sub.add_parser("doctor", help="verify installation and configuration")
+    doctor_p.add_argument("--quiet", action="store_true", default=argparse.SUPPRESS,
+                          help="suppress the interactive launch mark")
     sub.add_parser("add-account", aliases=["ac"],
                     help="log into a Claude account via an isolated Claude Code session "
                          "(doesn't affect other logged-in accounts) and add it as a Profile")
@@ -2857,11 +2865,11 @@ def main(argv=None) -> int:
     argv, codex_verbatim = _split_codex_passthrough(list(sys.argv[1:] if argv is None else argv))
     args, unknown = parser.parse_known_args(argv)
     if args.cmd == "start":
-        return start(_resolve_port_or_exit(args.port))
+        return start(_resolve_port_or_exit(args.port), quiet=args.quiet)
     if args.cmd == "status":
         return status()
     if args.cmd == "doctor":
-        return doctor()
+        return doctor(quiet=args.quiet)
     if args.cmd in ("add-account", "ac"):
         return add_account()
     if args.cmd in ("add-codex-account", "aca"):

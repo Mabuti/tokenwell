@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🥷</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Tokenwell</title>
+  <circle cx="32" cy="12" r="11" fill="#F2A93B"/>
+  <circle cx="32" cy="12" r="5.5" fill="none" stroke="#B86E0C" stroke-width="3.5"/>
+  <line x1="32" y1="25" x2="32" y2="29" stroke="#3FB6C0" stroke-width="4" stroke-linecap="round"/>
+  <rect x="9" y="35" width="46" height="27" rx="7" fill="#0E7C86"/>
+  <rect x="4" y="30" width="56" height="10" rx="5" fill="#0A4F5C"/>
+  <path d="M16 51 q4 -5 8 0 t8 0 t8 0 t8 0" fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round"/>
+</svg>
