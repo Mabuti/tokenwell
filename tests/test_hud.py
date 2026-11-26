@@ -6,6 +6,7 @@ in conftest, and both `opener` and `runner` are injected fakes.
 """
 
 import hashlib
+import os
 import plistlib
 
 import pytest
@@ -356,7 +357,7 @@ def test_the_real_hud_can_never_be_removed_by_a_test(tmp_path, monkeypatch):
             if name.endswith(("_dir", "_path")):
                 assert param.default is None, f"{fn.__name__}({name}=) binds a path at import time"
 
-    real_applications = Path.home() / "Applications"
+    real_applications = Path(os.environ["TOKENWELL_TEST_HOME"]) / "Applications"
     monkeypatch.setattr(hud, "BUNDLE_DIR", tmp_path / "Applications")
     monkeypatch.setattr(hud, "LEGACY_BUNDLE", tmp_path / "Applications" / "CapacityWidget.app")
     monkeypatch.setattr(hud, "LAUNCH_AGENT", tmp_path / "LaunchAgents" / f"{hud.LABEL}.plist")

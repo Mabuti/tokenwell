@@ -8,6 +8,8 @@ Schema here is not invented: it was read back out of the app after configuring
 it by hand through Developer > Configure Third-Party Inference.
 """
 import json
+import os
+from pathlib import Path
 
 import tokenwell.cli as cli
 
@@ -112,7 +114,7 @@ def test_a_corrupt_meta_file_does_not_crash(monkeypatch, tmp_path):
 def test_the_suite_never_touches_the_real_app_config(monkeypatch, tmp_path):
     # Regression guard: a test once wrote a fake token into the developer's
     # actual Claude desktop configuration.
-    real = cli.Path.home() / "Library" / "Application Support" / "Claude-3p" / "configLibrary"
+    real = Path(os.environ["TOKENWELL_TEST_HOME"]) / "Library" / "Application Support" / "Claude-3p" / "configLibrary"
     before = sorted(p.name for p in real.glob("*.json")) if real.is_dir() else None
 
     _dirs(monkeypatch, tmp_path)

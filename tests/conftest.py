@@ -1,4 +1,26 @@
+import os
 import ssl
+import tempfile
+from pathlib import Path
+
+
+# Pytest imports conftest.py before it collects test modules. Redirect every
+# home-like environment variable before importing tokenwell so module-level
+# Path.home() values and config migration can never see the developer's home.
+_ORIGINAL_HOME = Path.home()
+os.environ["TOKENWELL_TEST_ORIGINAL_HOME"] = str(_ORIGINAL_HOME)
+_TEST_HOME = Path(tempfile.mkdtemp(prefix="tokenwell-test-home-"))
+os.environ["TOKENWELL_TEST_HOME"] = str(_TEST_HOME)
+for _name, _value in {
+    "HOME": _TEST_HOME,
+    "USERPROFILE": _TEST_HOME,
+    "XDG_CONFIG_HOME": _TEST_HOME / ".config",
+    "XDG_DATA_HOME": _TEST_HOME / ".local" / "share",
+    "APPDATA": _TEST_HOME / "AppData" / "Roaming",
+    "LOCALAPPDATA": _TEST_HOME / "AppData" / "Local",
+}.items():
+    os.environ[_name] = str(_value)
+os.environ["TOKENWELL_NO_MIGRATE"] = "1"
 
 import pytest
 

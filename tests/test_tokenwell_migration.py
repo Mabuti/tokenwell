@@ -27,6 +27,7 @@ def _legacy_home(tmp_path, *, db=True):
 
 def _at_home(monkeypatch, tmp_path):
     monkeypatch.setattr(config.Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.delenv("TOKENWELL_NO_MIGRATE", raising=False)
 
 
 def _wal_database(directory):
