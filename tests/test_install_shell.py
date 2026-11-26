@@ -98,6 +98,13 @@ def systemctl_stub(tmp_path):
         encoding="utf-8",
     )
     stub.chmod(0o755)
+    uname = tmp_path / "uname"
+    uname.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf '%s\\n' Linux\n",
+        encoding="utf-8",
+    )
+    uname.chmod(0o755)
     return stub, calls
 
 
