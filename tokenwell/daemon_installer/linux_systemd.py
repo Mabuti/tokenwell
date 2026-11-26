@@ -150,8 +150,17 @@ def install(port: int) -> None:
             if stopped.returncode != 0:
                 raise DaemonInstallerError(
                     f"systemctl --user stop failed: {(stopped.stderr or stopped.stdout).strip()}")
+    new_present = UNIT_PATH.exists()
+    new_contents = UNIT_PATH.read_bytes() if new_present else None
+    new_enabled = False
+    new_running = False
+    if new_present:
+        new_enabled = _run_systemctl("is-enabled", UNIT_NAME).returncode == 0
+        new_running = _run_systemctl("is-active", UNIT_NAME).returncode == 0
     old_dropin = UNIT_DIR / f"{LEGACY_UNIT_NAME}.d"
     new_dropin = UNIT_DIR / f"{UNIT_NAME}.d"
+    copied_dropins: list[Path] = []
+    enabled_new_this_run = False
     UNIT_DIR.mkdir(parents=True, exist_ok=True)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -162,12 +171,14 @@ def install(port: int) -> None:
                 target = new_dropin / item.name
                 if not target.exists() and item.is_file():
                     shutil.copy2(item, target)
+                    copied_dropins.append(target)
         UNIT_PATH.write_text(_unit_contents(port), encoding="utf-8")
         reload_result = _run_systemctl("daemon-reload")
         if reload_result.returncode != 0:
             raise DaemonInstallerError(
                 f"systemctl --user daemon-reload failed: {(reload_result.stderr or reload_result.stdout).strip()}")
 
+        enabled_new_this_run = not new_enabled
         enable_result = _run_systemctl("enable", UNIT_NAME)
         if enable_result.returncode != 0:
             raise DaemonInstallerError(
@@ -181,13 +192,32 @@ def install(port: int) -> None:
             raise DaemonInstallerError(
                 f"systemctl --user restart failed: {(restart_result.stderr or restart_result.stdout).strip()}")
     except (OSError, DaemonInstallerError):
-        # Remove the new registration, then restore the old service only to
-        # the enabled/running state it had before the upgrade.
-        UNIT_PATH.unlink(missing_ok=True)
+        # Remove only the new registration made by this run, restore a prior
+        # Tokenwell definition when one existed, then restore the old service
+        # only to the enabled/running state it had before the upgrade.
+        if new_contents is None:
+            UNIT_PATH.unlink(missing_ok=True)
+        else:
+            UNIT_PATH.write_bytes(new_contents)
+        if enabled_new_this_run:
+            _run_systemctl("disable", UNIT_NAME)
+        for copied in reversed(copied_dropins):
+            copied.unlink(missing_ok=True)
         _run_systemctl("daemon-reload")
+        if new_present:
+            if new_enabled:
+                _run_systemctl("enable", UNIT_NAME)
+            else:
+                _run_systemctl("disable", UNIT_NAME)
+            if new_running:
+                _run_systemctl("restart", UNIT_NAME)
+            else:
+                _run_systemctl("stop", UNIT_NAME)
         if old_present:
             if old_enabled:
                 _run_systemctl("enable", LEGACY_UNIT_NAME)
+            else:
+                _run_systemctl("disable", LEGACY_UNIT_NAME)
             if old_running:
                 _run_systemctl("start", LEGACY_UNIT_NAME)
         raise

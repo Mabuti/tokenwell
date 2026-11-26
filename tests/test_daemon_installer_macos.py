@@ -108,6 +108,31 @@ def test_upgrade_failure_restores_running_old_plist(isolated_paths, monkeypatch)
     assert ("bootstrap", launchd._domain_target(), str(old)) in calls
 
 
+def test_failed_reinstall_restores_existing_new_plist_and_loaded_state(isolated_paths, monkeypatch):
+    launchd.PLIST_PATH.parent.mkdir(parents=True)
+    launchd.PLIST_PATH.write_bytes(b"previous plist")
+    calls = []
+    bootstrap_count = 0
+
+    def run(*args):
+        nonlocal bootstrap_count
+        calls.append(args)
+        if args[0] == "print" and launchd.LABEL in args[-1]:
+            return subprocess.CompletedProcess(args, 0, stdout="loaded", stderr="")
+        if args[0] == "bootstrap":
+            bootstrap_count += 1
+            if bootstrap_count == 1:
+                return subprocess.CompletedProcess(args, 1, stdout="", stderr="boom")
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(launchd, "_run_launchctl", run)
+    with pytest.raises(launchd.DaemonInstallerError, match="boom"):
+        launchd.install(port=4317)
+
+    assert launchd.PLIST_PATH.read_bytes() == b"previous plist"
+    assert calls.count(("bootstrap", launchd._domain_target(), str(launchd.PLIST_PATH))) == 2
+
+
 def test_uninstall_removes_plist_and_boots_out(isolated_paths, monkeypatch):
     fake = FakeLaunchctl()
     monkeypatch.setattr(launchd, "_run_launchctl", fake)

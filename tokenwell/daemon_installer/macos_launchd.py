@@ -52,6 +52,12 @@ def install(port: int) -> None:
                 raise DaemonInstallerError(
                     f"launchctl bootout failed: {(stopped.stderr or stopped.stdout).strip()}")
 
+    new_present = PLIST_PATH.exists()
+    new_contents = PLIST_PATH.read_bytes() if new_present else None
+    new_loaded = new_present and _run_launchctl(
+        "print", f"{_domain_target()}/{LABEL}"
+    ).returncode == 0
+
     plist = {
         "Label": LABEL,
         "ProgramArguments": [sys.executable, "-m", "tokenwell", "start", "--port", str(port)],
@@ -74,7 +80,15 @@ def install(port: int) -> None:
             raise DaemonInstallerError(f"launchctl bootstrap failed: {(result.stderr or result.stdout).strip()}")
     except (OSError, DaemonInstallerError):
         _run_launchctl("bootout", f"{_domain_target()}/{LABEL}")
-        PLIST_PATH.unlink(missing_ok=True)
+        if new_contents is None:
+            PLIST_PATH.unlink(missing_ok=True)
+        else:
+            PLIST_PATH.write_bytes(new_contents)
+            if new_loaded:
+                restored = _run_launchctl("bootstrap", _domain_target(), str(PLIST_PATH))
+                if restored.returncode != 0:
+                    raise DaemonInstallerError(
+                        f"launchd Tokenwell rollback failed: {(restored.stderr or restored.stdout).strip()}")
         if old_running:
             restored = _run_launchctl("bootstrap", _domain_target(), str(LEGACY_PLIST_PATH))
             if restored.returncode != 0:

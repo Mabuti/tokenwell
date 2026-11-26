@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from ..config import APP_DIR
 
@@ -56,6 +57,11 @@ def install(port: int) -> None:
     old_running = old_present and "running" in (old_query.stdout or "").lower()
     if old_running:
         _run("schtasks", "/end", "/tn", LEGACY_TASK_NAME)
+
+    new_query = _run("schtasks", "/query", "/tn", TASK_NAME, "/xml")
+    new_definition = new_query.stdout if new_query.returncode == 0 and new_query.stdout.strip() else None
+    new_status = _run("schtasks", "/query", "/tn", TASK_NAME)
+    new_running = new_definition is not None and "running" in (new_status.stdout or "").lower()
     # pythonw.exe, if present alongside the running interpreter, avoids
     # popping a console window on logon; fall back to the interpreter itself
     # (e.g. a venv that only ships python.exe).
@@ -75,7 +81,10 @@ def install(port: int) -> None:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     out_log = LOG_DIR / "daemon.out.log"
     err_log = LOG_DIR / "daemon.err.log"
-    wrapper = LOG_DIR.parent / "daemon_launcher.cmd"
+    wrapper = LOG_DIR.parent / "tokenwell_launcher.cmd"
+    old_wrapper = LOG_DIR.parent / "daemon_launcher.cmd"
+    old_wrapper_bytes = wrapper.read_bytes() if wrapper.exists() else None
+    backup_path = None
     try:
         wrapper.write_text(
             "@echo off\r\n"
@@ -96,13 +105,34 @@ def install(port: int) -> None:
             raise DaemonInstallerError(f"schtasks /run failed: {(started.stderr or started.stdout).strip()}")
     except (OSError, DaemonInstallerError):
         _run("schtasks", "/delete", "/tn", TASK_NAME, "/f")
-        wrapper.unlink(missing_ok=True)
+        if old_wrapper_bytes is None:
+            wrapper.unlink(missing_ok=True)
+        else:
+            wrapper.write_bytes(old_wrapper_bytes)
+        if new_definition is not None:
+            try:
+                with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".xml", delete=False,
+                                                 dir=LOG_DIR) as backup:
+                    backup.write(new_definition)
+                    backup_path = Path(backup.name)
+                restored = _run("schtasks", "/create", "/tn", TASK_NAME,
+                                "/xml", str(backup_path), "/f")
+                if restored.returncode != 0:
+                    raise DaemonInstallerError(
+                        f"schtasks restore failed: {(restored.stderr or restored.stdout).strip()}")
+                if new_running:
+                    _run("schtasks", "/run", "/tn", TASK_NAME)
+            finally:
+                if backup_path is not None:
+                    backup_path.unlink(missing_ok=True)
         if old_running:
             _run("schtasks", "/run", "/tn", LEGACY_TASK_NAME)
         raise
 
     if old_present:
-        _run("schtasks", "/delete", "/tn", LEGACY_TASK_NAME, "/f")
+        removed = _run("schtasks", "/delete", "/tn", LEGACY_TASK_NAME, "/f")
+        if removed.returncode == 0:
+            old_wrapper.unlink(missing_ok=True)
 
 
 def uninstall() -> None:

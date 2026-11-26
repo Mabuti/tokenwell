@@ -50,7 +50,7 @@ def test_install_creates_task_and_starts_it():
     # inside schtasks' own parsing of /tr.
     tr_value = create_call[create_call.index("/tr") + 1]
     wrapper = backend.Path(tr_value.strip('"'))
-    assert wrapper.name == "daemon_launcher.cmd"
+    assert wrapper.name == "tokenwell_launcher.cmd"
     content = wrapper.read_text(encoding="ascii")
     assert "tokenwell start --port 4317" in content
     assert " -u " in content  # unbuffered — see the buffering half of the same bug
@@ -82,6 +82,33 @@ def test_install_raises_on_create_failure():
     with patch.object(backend, "_run", return_value=_ok(returncode=1, stdout="access denied")):
         with pytest.raises(backend.DaemonInstallerError):
             backend.install(4317)
+
+
+def test_failed_reinstall_restores_existing_task_definition_and_launcher():
+    old_launcher = backend.LOG_DIR.parent / "tokenwell_launcher.cmd"
+    old_launcher.write_text("previous launcher", encoding="ascii")
+    definition = "<Task><Settings><Enabled>false</Enabled></Settings></Task>"
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        if args[:4] == ("schtasks", "/query", "/tn", backend.LEGACY_TASK_NAME):
+            return _ok(returncode=1)
+        if args == ("schtasks", "/query", "/tn", backend.TASK_NAME, "/xml"):
+            return _ok(stdout=definition)
+        if args == ("schtasks", "/query", "/tn", backend.TASK_NAME):
+            return _ok(stdout="Running")
+        if args == ("schtasks", "/run", "/tn", backend.TASK_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        return _ok()
+
+    with patch.object(backend, "_run", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError):
+            backend.install(4317)
+
+    assert old_launcher.read_text(encoding="ascii") == "previous launcher"
+    assert any(call[:4] == ("schtasks", "/create", "/tn", backend.TASK_NAME)
+               and "/xml" in call for call in calls)
 
 
 def test_upgrade_starts_new_task_before_deleting_old_task(tmp_path):

@@ -60,6 +60,41 @@ function Install-Tokenwell {
     function Ok($m)   { Write-Host $m -ForegroundColor Green }
     function Warn($m) { Write-Host $m -ForegroundColor Yellow }
 
+    $script:LegacyServiceStopped = $false
+    function Wait-LegacyProcess {
+        $pidPath = Join-Path $HOME '.claude-unlimited\daemon.pid'
+        for ($i = 0; $i -lt 20; $i++) {
+            if (-not (Test-Path -LiteralPath $pidPath)) { return }
+            try { $pid = [int](Get-Content -LiteralPath $pidPath -Raw).Trim() }
+            catch { return }
+            if (-not (Get-Process -Id $pid -ErrorAction SilentlyContinue)) { return }
+            Start-Sleep -Milliseconds 250
+        }
+        throw "Legacy service stopped, but its daemon process did not exit."
+    }
+    function Stop-LegacyService {
+        $query = & schtasks.exe /query /tn 'ClaudeUnlimitedDaemon' 2>&1
+        if ($LASTEXITCODE -eq 0 -and ($query -match 'Running')) {
+            $stopped = & schtasks.exe /end /tn 'ClaudeUnlimitedDaemon' 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                throw "Could not stop ClaudeUnlimitedDaemon: $($stopped -join ' ')"
+            }
+            $script:LegacyServiceStopped = $true
+            Wait-LegacyProcess
+        }
+    }
+    function Restore-LegacyService {
+        if (-not $script:LegacyServiceStopped) { return }
+        $started = & schtasks.exe /run /tn 'ClaudeUnlimitedDaemon' 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Warn "Could not restart ClaudeUnlimitedDaemon after the failed upgrade: $($started -join ' ')"
+        }
+        $script:LegacyServiceStopped = $false
+    }
+
+    try {
+    Stop-LegacyService
+
     # Keep a recoverable copy before the installer runs any new command. A
     # reparse point is the migration compatibility path, not user data to copy.
     $LegacyDataRoot = Join-Path $HOME '.claude-unlimited'
@@ -537,21 +572,13 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
     # --- 5. Register the background service ----------------------------------
     Say ""
     Say "Setting Tokenwell to run in the background..."
-    & schtasks.exe /delete /tn 'ClaudeUnlimitedDaemon' /f 2>$null | Out-Null
-    $registered = $false
     try {
         Invoke-CU install --port $Port
-        if ($LASTEXITCODE -eq 0) { $registered = $true }
-    } catch {}
-    if (-not $registered) {
-        Warn "Couldn't register the auto-start task - that step needs an elevated terminal."
-        Warn "Starting Tokenwell for this session instead. To have it start"
-        Warn "automatically every time you log in, re-run this installer from an"
-        Warn "Administrator PowerShell."
-        # Detached so the daemon outlives this window.
-        $pre = @($py.Args | Where-Object { $_ })
-        Start-Process -WindowStyle Hidden -FilePath $py.Exe `
-            -ArgumentList ($pre + @('-m','tokenwell','start','--port',$Port))
+        if ($LASTEXITCODE -ne 0) { throw "Couldn't register the Tokenwell auto-start task." }
+        $script:LegacyServiceStopped = $false
+    } catch {
+        Warn "Couldn't register the auto-start task - the legacy service was restored."
+        throw
     }
 
     # --- 6. Wait for it to answer, then open the dashboard -------------------
@@ -584,6 +611,9 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
     Say "(If 'tokenwell' isn't recognized, open a NEW terminal first, or use"
     Say " 'py -m tokenwell' instead.)"
     Say ""
+    } finally {
+        Restore-LegacyService
+    }
 }
 
 Install-Tokenwell

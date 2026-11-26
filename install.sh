@@ -7,6 +7,7 @@ INSTALL_ROOT="$HOME/.local/share/tokenwell"
 LEGACY_INSTALL_ROOT="$HOME/.local/share/claude-unlimited"
 BIN_DIR="$HOME/.local/bin"
 PATH_NOTE=""
+LEGACY_SERVICE_STOPPED=0
 
 # Works two ways: run from a checkout (./install.sh), or piped straight from
 # the network (curl … | bash), in which case there is no checkout to copy from
@@ -19,18 +20,89 @@ else
   CLONED="$SOURCE_DIR"
 fi
 cleanup() { [ -n "$CLONED" ] && rm -rf "$CLONED" || true; }
-trap cleanup EXIT
+
+wait_for_legacy_pid() {
+  local pid_file="$HOME/.claude-unlimited/daemon.pid" pid pid_check
+  for pid_check in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    if [ ! -f "$pid_file" ]; then return 0; fi
+    pid="$(tr -d '[:space:]' < "$pid_file" 2>/dev/null || true)"
+    if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then return 0; fi
+    sleep 0.25
+  done
+  echo "Legacy service stopped, but its daemon process ($pid) did not exit." >&2
+  return 1
+}
+
+stop_legacy_service() {
+  case "$(uname -s)" in
+    Linux)
+      if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active --quiet claude-unlimited.service; then
+        if ! stop_output="$(systemctl --user stop claude-unlimited.service 2>&1)"; then
+          echo "Could not stop claude-unlimited.service: $stop_output" >&2
+          return 1
+        fi
+        LEGACY_SERVICE_STOPPED=1
+        wait_for_legacy_pid || return 1
+      fi
+      ;;
+    Darwin)
+      if launchctl print "gui/$(id -u)/com.claude-unlimited.daemon" >/dev/null 2>&1; then
+        if ! stop_output="$(launchctl bootout "gui/$(id -u)/com.claude-unlimited.daemon" 2>&1)"; then
+          echo "Could not stop com.claude-unlimited.daemon: $stop_output" >&2
+          return 1
+        fi
+        LEGACY_SERVICE_STOPPED=1
+        wait_for_legacy_pid || return 1
+      fi
+      ;;
+  esac
+}
+
+restore_legacy_service() {
+  [ "$LEGACY_SERVICE_STOPPED" -eq 1 ] || return 0
+  case "$(uname -s)" in
+    Linux)
+      systemctl --user start claude-unlimited.service >/dev/null 2>&1 || \
+        echo "Could not restart claude-unlimited.service after the failed upgrade." >&2
+      ;;
+    Darwin)
+      local plist="$HOME/Library/LaunchAgents/com.claude-unlimited.daemon.plist"
+      if [ -f "$plist" ]; then
+        launchctl bootstrap "gui/$(id -u)" "$plist" >/dev/null 2>&1 || \
+          echo "Could not restart com.claude-unlimited.daemon after the failed upgrade." >&2
+      else
+        echo "Could not restart com.claude-unlimited.daemon: its plist is missing." >&2
+      fi
+      ;;
+  esac
+  LEGACY_SERVICE_STOPPED=0
+}
+
+on_exit() {
+  local status=$?
+  if [ "$LEGACY_SERVICE_STOPPED" -eq 1 ]; then restore_legacy_service; fi
+  cleanup
+  return "$status"
+}
+trap on_exit EXIT
 
 echo "Tokenwell installer"
 echo "=========================="
+
+if ! stop_legacy_service; then
+  echo "Legacy service was not safely stopped; no backup or Tokenwell install was started." >&2
+  exit 1
+fi
 
 # Keep a recoverable copy before installing or invoking the new command. A
 # symlink is the migration compatibility path, not user data to duplicate.
 LEGACY_DATA_ROOT="$HOME/.claude-unlimited"
 if [ -d "$LEGACY_DATA_ROOT" ] && [ ! -L "$LEGACY_DATA_ROOT" ]; then
   LEGACY_BACKUP="$HOME/.claude-unlimited.bak-$(date +%Y%m%d-%H%M%S)"
-  cp -a "$LEGACY_DATA_ROOT" "$LEGACY_BACKUP"
-  echo "Backed up legacy data to: $LEGACY_BACKUP"
+  if [ ! -e "$LEGACY_BACKUP" ]; then
+    cp -a "$LEGACY_DATA_ROOT" "$LEGACY_BACKUP"
+    echo "Backed up legacy data to: $LEGACY_BACKUP"
+  fi
 fi
 if [ -d "$LEGACY_INSTALL_ROOT" ]; then
   echo "Old install found at $LEGACY_INSTALL_ROOT; it is no longer used and can be removed after you check the upgrade."
@@ -150,10 +222,11 @@ echo "Setting it to run in the background…"
 # while the OLD version kept serving, because nobody checked.
 if INSTALL_OUTPUT="$("$CLI" install --port "$PORT" 2>&1)"; then
   echo "Background service: installed (starts on login)"
+  LEGACY_SERVICE_STOPPED=0
 else
   echo "$INSTALL_OUTPUT" >&2
-  echo "Background service: could not be installed — starting it for this session only"
-  nohup "$CLI" start --port "$PORT" >/dev/null 2>&1 &
+  echo "Background service: could not be installed — the legacy service was restored" >&2
+  exit 1
 fi
 
 # macOS gets the HUD — the floating dock of accounts — without asking for it.

@@ -111,6 +111,30 @@ def test_upgrade_failure_restores_old_service_and_removes_new_unit(tmp_path):
     assert ("start", backend.LEGACY_UNIT_NAME) in calls
 
 
+def test_failed_reinstall_restores_existing_tokenwell_definition_and_state():
+    backend.UNIT_DIR.mkdir(parents=True)
+    backend.UNIT_PATH.write_text("previous unit", encoding="utf-8")
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        if args == ("is-enabled", backend.UNIT_NAME):
+            return _ok(returncode=1)
+        if args == ("is-active", backend.UNIT_NAME):
+            return _ok(returncode=0)
+        if args == ("restart", backend.UNIT_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        return _ok()
+
+    with patch.object(backend, "_run_systemctl", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError):
+            backend.install(4317)
+
+    assert backend.UNIT_PATH.read_text(encoding="utf-8") == "previous unit"
+    assert ("disable", backend.UNIT_NAME) in calls
+    assert ("restart", backend.UNIT_NAME) in calls[ calls.index(("restart", backend.UNIT_NAME)) + 1: ]
+
+
 def test_install_on_a_systemd_less_box_raises_cleanly_and_leaves_no_unit():
     # _run_systemctl turns a missing `systemctl` into DaemonInstallerError; the
     # very first call (is-system-running) must abort before any unit is written.
