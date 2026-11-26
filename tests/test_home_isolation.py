@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import tokenwell
 
 
 _HOME_PATH_MODULES = (
@@ -23,6 +24,26 @@ _HOME_PATH_MODULES = (
     "tokenwell.cli",
 )
 
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+_INSTALLED_PACKAGE_DIR = Path(tokenwell.__file__).resolve().parent
+
+
+def _is_original_home_violation(
+    value, original_home, allowed_roots=(_REPOSITORY_ROOT, _INSTALLED_PACKAGE_DIR)
+):
+    try:
+        value.relative_to(original_home)
+    except ValueError:
+        return False
+
+    for allowed_root in allowed_roots:
+        try:
+            value.relative_to(allowed_root)
+        except ValueError:
+            continue
+        return False
+    return True
+
 
 def test_import_time_paths_never_use_the_original_home():
     original_home = Path(os.environ["TOKENWELL_TEST_ORIGINAL_HOME"])
@@ -33,13 +54,22 @@ def test_import_time_paths_never_use_the_original_home():
         for name, value in vars(module).items():
             if not isinstance(value, Path) or not value.is_absolute():
                 continue
-            try:
-                value.relative_to(original_home)
-            except ValueError:
-                continue
-            violations.append(f"{module_name}.{name}={value}")
+            if _is_original_home_violation(value, original_home):
+                violations.append(f"{module_name}.{name}={value}")
 
     assert not violations, "module-level paths escaped the test home: " + "; ".join(violations)
+
+
+def test_home_isolation_filter_ignores_repo_but_flags_other_paths(tmp_path):
+    original_home = tmp_path / "original-home"
+    repository_root = original_home / "work" / "tokenwell"
+    inside_repository = repository_root / "tokenwell" / "static"
+    outside_repository = original_home / ".config" / "tokenwell"
+
+    assert not _is_original_home_violation(
+        inside_repository, original_home, (repository_root,)
+    )
+    assert _is_original_home_violation(outside_repository, original_home)
 
 
 def _seed_real_install(home):
