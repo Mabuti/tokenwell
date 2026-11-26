@@ -8,6 +8,7 @@ LEGACY_INSTALL_ROOT="$HOME/.local/share/claude-unlimited"
 BIN_DIR="$HOME/.local/bin"
 PATH_NOTE=""
 LEGACY_SERVICE_STOPPED=0
+export TOKENWELL_NO_MIGRATE=1
 
 # Works two ways: run from a checkout (./install.sh), or piped straight from
 # the network (curl … | bash), in which case there is no checkout to copy from
@@ -60,6 +61,17 @@ stop_legacy_service() {
 
 restore_legacy_service() {
   [ "$LEGACY_SERVICE_STOPPED" -eq 1 ] || return 0
+  local legacy_data="$HOME/.claude-unlimited" new_data="$HOME/.tokenwell" legacy_target
+  if [ -f "$new_data/tokenwell.db" ]; then
+    if [ -L "$legacy_data" ]; then
+      legacy_target="$(readlink "$legacy_data" 2>/dev/null || true)"
+    fi
+    if [ "$legacy_target" = "$new_data" ] || [ ! -f "$legacy_data/claude_unlimited.db" ]; then
+      echo "Legacy data has been migrated; leaving the legacy service stopped. Start Tokenwell with: tokenwell start" >&2
+      LEGACY_SERVICE_STOPPED=0
+      return 0
+    fi
+  fi
   case "$(uname -s)" in
     Linux)
       systemctl --user start claude-unlimited.service >/dev/null 2>&1 || \

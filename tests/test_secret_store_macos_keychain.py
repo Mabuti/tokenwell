@@ -88,3 +88,80 @@ def test_failed_verify_clears_new_entry_so_second_read_uses_legacy():
     assert state["new"] is False
     assert sum(c[1] == "delete-generic-password" and c[-1] == macos_keychain._service("profile-1")
                for c in calls) == 2
+
+
+def test_failed_write_keeps_the_old_entry():
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        if command[1] == "find-generic-password":
+            service = command[command.index("-s") + 1]
+            if service == macos_keychain._service("profile-1"):
+                raise subprocess.CalledProcessError(44, command)
+            return MagicMock(stdout="legacy-token\n")
+        if command[1] == "add-generic-password":
+            raise subprocess.CalledProcessError(1, command)
+        return MagicMock(returncode=0)
+
+    with patch.object(macos_keychain.subprocess, "run", side_effect=run):
+        assert macos_keychain.get_token("profile-1") == "legacy-token"
+
+    assert not any(c[1] == "delete-generic-password" for c in calls)
+
+
+def test_failed_verify_retries_cleanup_and_keeps_old_entry():
+    state = {"new": False, "legacy": True, "clears": 0}
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        if command[1] == "find-generic-password":
+            service = command[command.index("-s") + 1]
+            if service == macos_keychain._service("profile-1"):
+                if not state["new"]:
+                    raise subprocess.CalledProcessError(44, command)
+                return MagicMock(stdout="wrong-token\n")
+            return MagicMock(stdout="legacy-token\n")
+        if command[1] == "add-generic-password":
+            state["new"] = True
+        elif command[1] == "delete-generic-password":
+            state["clears"] += 1
+            if state["clears"] == 2:
+                state["new"] = False
+        return MagicMock(returncode=0)
+
+    with patch.object(macos_keychain.subprocess, "run", side_effect=run):
+        assert macos_keychain.get_token("profile-1") == "legacy-token"
+
+    assert state["clears"] == 2
+    assert state["new"] is False
+
+
+def test_cleanup_failure_is_retried_and_logged():
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        if command[1] == "delete-generic-password":
+            return MagicMock(returncode=1)
+        return MagicMock(stdout="still-present\n")
+
+    with patch.object(macos_keychain.subprocess, "run", side_effect=run), \
+         patch.object(macos_keychain, "_get_service_token", return_value="still-present"), \
+         patch.object(macos_keychain._LOGGER, "error") as error:
+        macos_keychain._clear_new_after_failed_migration("profile-1")
+
+    assert sum(c[1] == "delete-generic-password" for c in calls) == 2
+    error.assert_called_once()
+    assert error.call_args.args[1] == "profile-1"
+
+
+def test_delete_token_clears_new_and_legacy_service_names():
+    with patch.object(macos_keychain.subprocess, "run") as mock_run:
+        macos_keychain.delete_token("profile-1")
+
+    assert [call.args[0][-1] for call in mock_run.call_args_list] == [
+        macos_keychain._service("profile-1"),
+        macos_keychain._legacy_service("profile-1"),
+    ]

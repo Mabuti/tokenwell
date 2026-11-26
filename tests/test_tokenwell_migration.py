@@ -60,6 +60,17 @@ def test_legacy_only_moves_db_and_leaves_symlink(tmp_path, monkeypatch):
     conn.close()
 
 
+def test_no_migrate_keeps_legacy_only_home_in_place(tmp_path, monkeypatch):
+    _at_home(monkeypatch, tmp_path)
+    legacy = _legacy_home(tmp_path)
+    monkeypatch.setenv("TOKENWELL_NO_MIGRATE", "1")
+
+    assert config.migrate_legacy_app_dir() == legacy
+    assert legacy.is_dir() and not legacy.is_symlink()
+    assert (legacy / "claude_unlimited.db").exists()
+    assert not (tmp_path / ".tokenwell").exists()
+
+
 def test_both_real_dirs_uses_new_and_leaves_legacy_untouched(tmp_path, monkeypatch):
     _at_home(monkeypatch, tmp_path)
     legacy = _legacy_home(tmp_path, db=False)
@@ -145,6 +156,24 @@ def test_wal_growth_after_checkpoint_rolls_back_to_legacy_layout(tmp_path, monke
         conn.close()
 
     monkeypatch.setattr(config, "_before_legacy_db_rename", legacy_writer_after_checkpoint)
+    assert config.migrate_legacy_app_dir() == legacy
+    assert legacy.is_dir() and not legacy.is_symlink()
+    assert (legacy / "claude_unlimited.db").exists()
+    assert not (tmp_path / ".tokenwell").exists()
+    writer.close()
+
+
+def test_daemon_becoming_alive_before_db_rename_rolls_back_to_legacy_layout(tmp_path, monkeypatch):
+    _at_home(monkeypatch, tmp_path)
+    legacy = _legacy_home(tmp_path, db=False)
+    writer = _wal_database(legacy)
+
+    def daemon_started(directory):
+        (directory / "daemon.pid").write_text("1234", encoding="utf-8")
+
+    monkeypatch.setattr(config, "_before_legacy_db_rename", daemon_started)
+    monkeypatch.setattr(config, "_pid_is_alive", lambda pid: True)
+
     assert config.migrate_legacy_app_dir() == legacy
     assert legacy.is_dir() and not legacy.is_symlink()
     assert (legacy / "claude_unlimited.db").exists()

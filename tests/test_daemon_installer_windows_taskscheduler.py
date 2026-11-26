@@ -111,6 +111,79 @@ def test_failed_reinstall_restores_existing_task_definition_and_launcher():
                and "/xml" in call for call in calls)
 
 
+def test_failed_reinstall_restores_utf16_task_definition_byte_for_byte():
+    definition = "<Task><Settings><Enabled>false</Enabled></Settings></Task>".encode("utf-16")
+    restored = []
+
+    def run(*args):
+        if args[:4] == ("schtasks", "/query", "/tn", backend.LEGACY_TASK_NAME):
+            return _ok(returncode=1)
+        if args == ("schtasks", "/query", "/tn", backend.TASK_NAME, "/xml"):
+            return _ok(stdout=definition)
+        if args == ("schtasks", "/query", "/tn", backend.TASK_NAME):
+            return _ok(stdout="Running")
+        if args == ("schtasks", "/run", "/tn", backend.TASK_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        if args[:5] == ("schtasks", "/create", "/tn", backend.TASK_NAME, "/xml"):
+            restored.append(backend.Path(args[5]).read_bytes())
+        return _ok()
+
+    with patch.object(backend, "_run", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError):
+            backend.install(4317)
+
+    assert restored == [definition]
+
+
+def test_failed_reinstall_attempts_legacy_restore_when_new_definition_restore_fails():
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        if args[:4] == ("schtasks", "/query", "/tn", backend.LEGACY_TASK_NAME):
+            return _ok(stdout="Running")
+        if args == ("schtasks", "/query", "/tn", backend.TASK_NAME, "/xml"):
+            return _ok(stdout=b"\xff\xfe<Task />")
+        if args == ("schtasks", "/query", "/tn", backend.TASK_NAME):
+            return _ok(stdout="Running")
+        if args == ("schtasks", "/run", "/tn", backend.TASK_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        if args[:5] == ("schtasks", "/create", "/tn", backend.TASK_NAME, "/xml"):
+            return _ok(returncode=1, stdout="restore failed")
+        return _ok()
+
+    with patch.object(backend, "_run", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError, match="restore failed"):
+            backend.install(4317)
+
+    assert ("schtasks", "/run", "/tn", backend.LEGACY_TASK_NAME) in calls
+
+
+def test_failed_upgrade_does_not_restart_legacy_after_data_migration(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    home.mkdir()
+    new = home / ".tokenwell"
+    new.mkdir()
+    (new / "tokenwell.db").write_bytes(b"db")
+    (home / ".claude-unlimited").symlink_to(new, target_is_directory=True)
+    monkeypatch.setattr(backend.Path, "home", classmethod(lambda cls: home))
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        if args[:4] == ("schtasks", "/query", "/tn", backend.LEGACY_TASK_NAME):
+            return _ok(stdout="Running")
+        if args == ("schtasks", "/run", "/tn", backend.TASK_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        return _ok()
+
+    with patch.object(backend, "_run", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError):
+            backend.install(4317)
+
+    assert ("schtasks", "/run", "/tn", backend.LEGACY_TASK_NAME) not in calls
+
+
 def test_upgrade_starts_new_task_before_deleting_old_task(tmp_path):
     calls = []
 

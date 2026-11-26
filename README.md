@@ -267,10 +267,12 @@ the new installer. On POSIX, `tokenwell install` (which `install.sh` runs) migra
 `~/.tokenwell`, renames the database and its WAL files, and leaves a compatibility symlink at the
 old path. The service rename happens during `tokenwell install`, not on the first daemon start.
 
-On Windows, Tokenwell keeps reading `~/.claude-unlimited` in place while `~/.tokenwell` does not
-exist. When both directories exist, the new one wins only when it contains `config.json` or a
-database. An empty `~/.tokenwell` is removed and the legacy directory is used for migration;
-Tokenwell does not merge populated directories. `cu` and
+On Windows, Tokenwell keeps the legacy `~/.claude-unlimited` directory in use in place; Windows
+does not migrate that directory. When both directories exist, the new one wins only when it
+contains `config.json` or a database. An empty `~/.tokenwell` is removed and the legacy directory
+continues in use; Tokenwell does not merge populated directories. During an upgrade, the installer
+sets `TOKENWELL_NO_MIGRATE=1` for its checks and install command so migration waits for the new
+daemon to start. `cu` and
 `claude-unlimited` continue to work. Installs made with `install.sh` need one reinstall from the
 new URL; editable installs need one `pip install -e .`.
 

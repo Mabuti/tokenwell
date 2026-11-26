@@ -35,6 +35,29 @@ class DaemonInstallerError(RuntimeError):
     pass
 
 
+def _legacy_data_was_migrated() -> bool:
+    home = Path.home()
+    legacy = home / ".claude-unlimited"
+    new = home / ".tokenwell"
+    if not (new / "tokenwell.db").is_file():
+        return False
+    if legacy.is_symlink():
+        try:
+            if legacy.resolve() == new.resolve():
+                return True
+        except OSError:
+            pass
+    return not (legacy / "claude_unlimited.db").is_file()
+
+
+def _leave_legacy_stopped() -> None:
+    print(
+        "Legacy data has been migrated; the legacy service was left stopped. "
+        "Start Tokenwell with `tokenwell start`.",
+        flush=True,
+    )
+
+
 # schtasks/tasklist/taskkill are console programs, and a process that has no
 # console of its own — which the daemon is, being started hidden — gets a NEW
 # console window allocated for each one it runs. The Dashboard polls status
@@ -44,7 +67,10 @@ _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 def _run(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(list(args), capture_output=True, text=True,
+    # The XML form is UTF-16 with a BOM on Windows. Keep that response as raw
+    # bytes so rollback can hand the exact definition back to schtasks.
+    raw = "/xml" in args
+    return subprocess.run(list(args), capture_output=True, text=not raw,
                           creationflags=_NO_WINDOW)
 
 
@@ -103,17 +129,32 @@ def install(port: int) -> None:
         started = _run("schtasks", "/run", "/tn", TASK_NAME)
         if started.returncode != 0:
             raise DaemonInstallerError(f"schtasks /run failed: {(started.stderr or started.stdout).strip()}")
-    except (OSError, DaemonInstallerError):
-        _run("schtasks", "/delete", "/tn", TASK_NAME, "/f")
-        if old_wrapper_bytes is None:
-            wrapper.unlink(missing_ok=True)
-        else:
-            wrapper.write_bytes(old_wrapper_bytes)
+    except (OSError, DaemonInstallerError) as exc:
+        rollback_errors = [str(exc)]
+        try:
+            deleted = _run("schtasks", "/delete", "/tn", TASK_NAME, "/f")
+            if deleted.returncode != 0:
+                raise DaemonInstallerError(
+                    f"schtasks Tokenwell delete rollback failed: "
+                    f"{(deleted.stderr or deleted.stdout).strip()}")
+        except (OSError, subprocess.SubprocessError) as rollback_exc:
+            rollback_errors.append(f"schtasks Tokenwell delete rollback failed: {rollback_exc}")
+        except DaemonInstallerError as rollback_exc:
+            rollback_errors.append(str(rollback_exc))
+        try:
+            if old_wrapper_bytes is None:
+                wrapper.unlink(missing_ok=True)
+            else:
+                wrapper.write_bytes(old_wrapper_bytes)
+        except OSError as rollback_exc:
+            rollback_errors.append(f"Tokenwell launcher rollback failed: {rollback_exc}")
         if new_definition is not None:
             try:
-                with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".xml", delete=False,
+                definition_bytes = (new_definition if isinstance(new_definition, bytes)
+                                    else new_definition.encode())
+                with tempfile.NamedTemporaryFile("wb", suffix=".xml", delete=False,
                                                  dir=LOG_DIR) as backup:
-                    backup.write(new_definition)
+                    backup.write(definition_bytes)
                     backup_path = Path(backup.name)
                 restored = _run("schtasks", "/create", "/tn", TASK_NAME,
                                 "/xml", str(backup_path), "/f")
@@ -121,13 +162,32 @@ def install(port: int) -> None:
                     raise DaemonInstallerError(
                         f"schtasks restore failed: {(restored.stderr or restored.stdout).strip()}")
                 if new_running:
-                    _run("schtasks", "/run", "/tn", TASK_NAME)
+                    started_again = _run("schtasks", "/run", "/tn", TASK_NAME)
+                    if started_again.returncode != 0:
+                        raise DaemonInstallerError(
+                            f"schtasks Tokenwell state restore failed: "
+                            f"{(started_again.stderr or started_again.stdout).strip()}")
+            except (OSError, DaemonInstallerError) as rollback_exc:
+                rollback_errors.append(str(rollback_exc))
             finally:
                 if backup_path is not None:
-                    backup_path.unlink(missing_ok=True)
+                    try:
+                        backup_path.unlink(missing_ok=True)
+                    except OSError as rollback_exc:
+                        rollback_errors.append(f"schtasks backup cleanup failed: {rollback_exc}")
         if old_running:
-            _run("schtasks", "/run", "/tn", LEGACY_TASK_NAME)
-        raise
+            if _legacy_data_was_migrated():
+                _leave_legacy_stopped()
+            else:
+                try:
+                    restored = _run("schtasks", "/run", "/tn", LEGACY_TASK_NAME)
+                    if restored.returncode != 0:
+                        raise DaemonInstallerError(
+                            f"schtasks legacy rollback failed: "
+                            f"{(restored.stderr or restored.stdout).strip()}")
+                except (OSError, DaemonInstallerError) as rollback_exc:
+                    rollback_errors.append(str(rollback_exc))
+        raise DaemonInstallerError("; ".join(error for error in rollback_errors if error)) from exc
 
     if old_present:
         removed = _run("schtasks", "/delete", "/tn", LEGACY_TASK_NAME, "/f")

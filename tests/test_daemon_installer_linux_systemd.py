@@ -135,6 +135,55 @@ def test_failed_reinstall_restores_existing_tokenwell_definition_and_state():
     assert ("restart", backend.UNIT_NAME) in calls[ calls.index(("restart", backend.UNIT_NAME)) + 1: ]
 
 
+def test_failed_upgrade_removes_only_dropins_copied_by_this_run(tmp_path):
+    old_path = backend.UNIT_DIR / backend.LEGACY_UNIT_NAME
+    old_dropin = backend.UNIT_DIR / f"{backend.LEGACY_UNIT_NAME}.d"
+    new_dropin = backend.UNIT_DIR / f"{backend.UNIT_NAME}.d"
+    backend.UNIT_DIR.mkdir(parents=True)
+    old_path.write_text("old", encoding="utf-8")
+    old_dropin.mkdir()
+    (old_dropin / "copied.conf").write_text("old-only", encoding="utf-8")
+    new_dropin.mkdir()
+    (new_dropin / "existing.conf").write_text("keep", encoding="utf-8")
+
+    def run(*args):
+        if args == ("restart", backend.UNIT_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        return _ok()
+
+    with patch.object(backend, "_run_systemctl", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError):
+            backend.install(4317)
+
+    assert not (new_dropin / "copied.conf").exists()
+    assert (new_dropin / "existing.conf").read_text(encoding="utf-8") == "keep"
+
+
+def test_failed_upgrade_does_not_restart_legacy_after_data_migration(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    home.mkdir()
+    new = home / ".tokenwell"
+    new.mkdir()
+    (new / "tokenwell.db").write_bytes(b"db")
+    (home / ".claude-unlimited").symlink_to(new, target_is_directory=True)
+    monkeypatch.setattr(backend.Path, "home", classmethod(lambda cls: home))
+    backend.UNIT_DIR.mkdir(parents=True)
+    (backend.UNIT_DIR / backend.LEGACY_UNIT_NAME).write_text("old", encoding="utf-8")
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        if args == ("restart", backend.UNIT_NAME):
+            return _ok(returncode=1, stdout="new failed")
+        return _ok()
+
+    with patch.object(backend, "_run_systemctl", side_effect=run):
+        with pytest.raises(backend.DaemonInstallerError):
+            backend.install(4317)
+
+    assert ("start", backend.LEGACY_UNIT_NAME) not in calls
+
+
 def test_install_on_a_systemd_less_box_raises_cleanly_and_leaves_no_unit():
     # _run_systemctl turns a missing `systemctl` into DaemonInstallerError; the
     # very first call (is-system-running) must abort before any unit is written.

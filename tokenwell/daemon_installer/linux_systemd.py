@@ -32,6 +32,29 @@ class DaemonInstallerError(RuntimeError):
     pass
 
 
+def _legacy_data_was_migrated() -> bool:
+    home = Path.home()
+    legacy = home / ".claude-unlimited"
+    new = home / ".tokenwell"
+    if not (new / "tokenwell.db").is_file():
+        return False
+    if legacy.is_symlink():
+        try:
+            if legacy.resolve() == new.resolve():
+                return True
+        except OSError:
+            pass
+    return not (legacy / "claude_unlimited.db").is_file()
+
+
+def _leave_legacy_stopped() -> None:
+    print(
+        "Legacy data has been migrated; the legacy service was left stopped. "
+        "Start Tokenwell with `tokenwell start`.",
+        flush=True,
+    )
+
+
 def _run_systemctl(*args: str):
     # FileNotFoundError (systemd not installed) is turned into our own error
     # rather than escaping as a raw OSError — every other subprocess site in
@@ -219,7 +242,10 @@ def install(port: int) -> None:
             else:
                 _run_systemctl("disable", LEGACY_UNIT_NAME)
             if old_running:
-                _run_systemctl("start", LEGACY_UNIT_NAME)
+                if _legacy_data_was_migrated():
+                    _leave_legacy_stopped()
+                else:
+                    _run_systemctl("start", LEGACY_UNIT_NAME)
         raise
 
     _run_systemctl("disable", LEGACY_UNIT_NAME)

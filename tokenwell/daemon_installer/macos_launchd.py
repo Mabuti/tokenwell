@@ -27,6 +27,29 @@ class DaemonInstallerError(RuntimeError):
     pass
 
 
+def _legacy_data_was_migrated() -> bool:
+    home = Path.home()
+    legacy = home / ".claude-unlimited"
+    new = home / ".tokenwell"
+    if not (new / "tokenwell.db").is_file():
+        return False
+    if legacy.is_symlink():
+        try:
+            if legacy.resolve() == new.resolve():
+                return True
+        except OSError:
+            pass
+    return not (legacy / "claude_unlimited.db").is_file()
+
+
+def _leave_legacy_stopped() -> None:
+    print(
+        "Legacy data has been migrated; the legacy service was left stopped. "
+        "Start Tokenwell with `tokenwell start`.",
+        flush=True,
+    )
+
+
 def _domain_target() -> str:
     return f"gui/{os.getuid()}"
 
@@ -78,23 +101,44 @@ def install(port: int) -> None:
         result = _run_launchctl("bootstrap", _domain_target(), str(PLIST_PATH))
         if result.returncode != 0:
             raise DaemonInstallerError(f"launchctl bootstrap failed: {(result.stderr or result.stdout).strip()}")
-    except (OSError, DaemonInstallerError):
-        _run_launchctl("bootout", f"{_domain_target()}/{LABEL}")
-        if new_contents is None:
-            PLIST_PATH.unlink(missing_ok=True)
-        else:
-            PLIST_PATH.write_bytes(new_contents)
-            if new_loaded:
-                restored = _run_launchctl("bootstrap", _domain_target(), str(PLIST_PATH))
-                if restored.returncode != 0:
-                    raise DaemonInstallerError(
-                        f"launchd Tokenwell rollback failed: {(restored.stderr or restored.stdout).strip()}")
-        if old_running:
-            restored = _run_launchctl("bootstrap", _domain_target(), str(LEGACY_PLIST_PATH))
-            if restored.returncode != 0:
+    except (OSError, DaemonInstallerError) as exc:
+        rollback_errors = [str(exc)]
+        try:
+            removed = _run_launchctl("bootout", f"{_domain_target()}/{LABEL}")
+            if removed.returncode != 0:
                 raise DaemonInstallerError(
-                    f"launchctl bootstrap rollback failed: {(restored.stderr or restored.stdout).strip()}")
-        raise
+                    f"launchd Tokenwell bootout rollback failed: "
+                    f"{(removed.stderr or removed.stdout).strip()}")
+        except (OSError, subprocess.SubprocessError) as rollback_exc:
+            rollback_errors.append(f"launchd Tokenwell bootout rollback failed: {rollback_exc}")
+        except DaemonInstallerError as rollback_exc:
+            rollback_errors.append(str(rollback_exc))
+        try:
+            if new_contents is None:
+                PLIST_PATH.unlink(missing_ok=True)
+            else:
+                PLIST_PATH.write_bytes(new_contents)
+                if new_loaded:
+                    restored = _run_launchctl("bootstrap", _domain_target(), str(PLIST_PATH))
+                    if restored.returncode != 0:
+                        raise DaemonInstallerError(
+                            f"launchd Tokenwell rollback failed: "
+                            f"{(restored.stderr or restored.stdout).strip()}")
+        except (OSError, DaemonInstallerError) as rollback_exc:
+            rollback_errors.append(str(rollback_exc))
+        if old_running:
+            if _legacy_data_was_migrated():
+                _leave_legacy_stopped()
+            else:
+                try:
+                    restored = _run_launchctl("bootstrap", _domain_target(), str(LEGACY_PLIST_PATH))
+                    if restored.returncode != 0:
+                        raise DaemonInstallerError(
+                            f"launchctl bootstrap rollback failed: "
+                            f"{(restored.stderr or restored.stdout).strip()}")
+                except (OSError, DaemonInstallerError) as rollback_exc:
+                    rollback_errors.append(str(rollback_exc))
+        raise DaemonInstallerError("; ".join(error for error in rollback_errors if error)) from exc
 
     _run_launchctl("bootout", f"{_domain_target()}/{LEGACY_LABEL}")
     LEGACY_PLIST_PATH.unlink(missing_ok=True)

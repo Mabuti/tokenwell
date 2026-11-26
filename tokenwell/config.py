@@ -122,6 +122,9 @@ def migrate_legacy_app_dir() -> Path:
     if new.exists():
         if (new.is_dir() and not new.is_symlink() and legacy.is_dir() and not legacy.is_symlink()
                 and not _has_migration_data(new) and _has_migration_data(legacy)):
+            if os.environ.get("TOKENWELL_NO_MIGRATE") == "1":
+                _LOGGER.info("Tokenwell migration disabled; using legacy data path %s", legacy)
+                return legacy
             try:
                 new.rmdir()
             except OSError:
@@ -132,6 +135,9 @@ def migrate_legacy_app_dir() -> Path:
             return new
     if not legacy.is_dir():
         return new
+    if os.environ.get("TOKENWELL_NO_MIGRATE") == "1":
+        _LOGGER.info("Tokenwell migration disabled; using legacy data path %s", legacy)
+        return legacy
     if os.name == "nt":
         return legacy
     lock = _lock_is_available(Path.home() / _MIGRATION_LOCK_NAME)

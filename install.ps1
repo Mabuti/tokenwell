@@ -21,6 +21,7 @@
 
 function Install-Tokenwell {
     $ErrorActionPreference = 'Stop'
+    $env:TOKENWELL_NO_MIGRATE = '1'
     # Old Windows PowerShell defaults to TLS 1.0, which github.com and
     # python.org reject - opt into TLS 1.2 so the downloads below work.
     try {
@@ -65,9 +66,9 @@ function Install-Tokenwell {
         $pidPath = Join-Path $HOME '.claude-unlimited\daemon.pid'
         for ($i = 0; $i -lt 20; $i++) {
             if (-not (Test-Path -LiteralPath $pidPath)) { return }
-            try { $pid = [int](Get-Content -LiteralPath $pidPath -Raw).Trim() }
-            catch { return }
-            if (-not (Get-Process -Id $pid -ErrorAction SilentlyContinue)) { return }
+            try { $legacyPid = [int](Get-Content -LiteralPath $pidPath -Raw).Trim() }
+            catch { throw "Could not read the legacy daemon PID while waiting for it to stop." }
+            if (-not (Get-Process -Id $legacyPid -ErrorAction SilentlyContinue)) { return }
             Start-Sleep -Milliseconds 250
         }
         throw "Legacy service stopped, but its daemon process did not exit."
@@ -85,6 +86,23 @@ function Install-Tokenwell {
     }
     function Restore-LegacyService {
         if (-not $script:LegacyServiceStopped) { return }
+        $legacyDataRoot = Join-Path $HOME '.claude-unlimited'
+        $newDataRoot = Join-Path $HOME '.tokenwell'
+        $newDb = Join-Path $newDataRoot 'tokenwell.db'
+        $legacyDb = Join-Path $legacyDataRoot 'claude_unlimited.db'
+        $migrated = $false
+        if (Test-Path -LiteralPath $newDb -PathType Leaf) {
+            $legacyItem = Get-Item -LiteralPath $legacyDataRoot -ErrorAction SilentlyContinue
+            if ($legacyItem -and ($legacyItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                try { $migrated = (Resolve-Path -LiteralPath $legacyDataRoot).Path -eq (Resolve-Path -LiteralPath $newDataRoot).Path } catch {}
+            }
+            if (-not (Test-Path -LiteralPath $legacyDb -PathType Leaf)) { $migrated = $true }
+        }
+        if ($migrated) {
+            Warn "Legacy data has been migrated; leaving the legacy service stopped. Start Tokenwell with: tokenwell start"
+            $script:LegacyServiceStopped = $false
+            return
+        }
         $started = & schtasks.exe /run /tn 'ClaudeUnlimitedDaemon' 2>&1
         if ($LASTEXITCODE -ne 0) {
             Warn "Could not restart ClaudeUnlimitedDaemon after the failed upgrade: $($started -join ' ')"
@@ -506,7 +524,7 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
         $dir = Join-Path $env:LocalAppData 'Microsoft\WindowsApps'
         if (-not (Test-Path $dir)) { return $null }
         $pre  = @($py.Args | Where-Object { $_ })
-        $args = if ($pre) { ($pre -join ' ') + ' ' } else { '' }
+        $launcherArgs = if ($pre) { ($pre -join ' ') + ' ' } else { '' }
         # Absolute paths, resolved here at install time, on purpose: `-m
         # tokenwell` would make the launcher depend on Python locating
         # the per-user site-packages directory, which it derives from %APPDATA%
@@ -534,7 +552,7 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
                 ("if exist `"$exePath`" (`r`n") +
                 ("  `"$exePath`" %*`r`n") +
                 (") else (`r`n") +
-                ('  "{0}" {1}-m tokenwell %*' -f $py.Exe, $args) + "`r`n" +
+                ('  "{0}" {1}-m tokenwell %*' -f $py.Exe, $launcherArgs) + "`r`n" +
                 (")`r`n")
         $file = Join-Path $dir "$Name.cmd"
         try {

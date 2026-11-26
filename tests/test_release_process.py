@@ -48,6 +48,19 @@ def test_the_installer_checks_with_its_own_bin_dir_on_path():
     assert 'if ! PATH="$BIN_DIR:$PATH" "$CLI" doctor; then' in script
 
 
+def test_installers_defer_migration_until_the_new_daemon_starts():
+    script = (ROOT / "install.sh").read_text(encoding="utf-8")
+    powershell = (ROOT / "install.ps1").read_text(encoding="utf-8")
+    assert "export TOKENWELL_NO_MIGRATE=1" in script
+    assert "$env:TOKENWELL_NO_MIGRATE = '1'" in powershell
+
+
+def test_windows_installer_does_not_assign_power_shell_automatic_variables():
+    powershell = (ROOT / "install.ps1").read_text(encoding="utf-8")
+    for name in ("PID", "HOME", "Host", "Error", "input", "args", "_", "Matches"):
+        assert not __import__("re").search(rf"\${name}\s*=", powershell, __import__("re").IGNORECASE)
+
+
 def test_the_uninstaller_finds_the_launcher_without_relying_on_path():
     # Without this a fresh account skips `purge` and leaves credentials behind.
     script = (ROOT / "uninstall.sh").read_text(encoding="utf-8")

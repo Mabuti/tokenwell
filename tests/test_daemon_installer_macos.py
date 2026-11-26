@@ -133,6 +133,62 @@ def test_failed_reinstall_restores_existing_new_plist_and_loaded_state(isolated_
     assert calls.count(("bootstrap", launchd._domain_target(), str(launchd.PLIST_PATH))) == 2
 
 
+def test_failed_reinstall_attempts_legacy_restore_when_new_definition_restore_fails(isolated_paths, monkeypatch):
+    old = isolated_paths / "LaunchAgents" / f"{launchd.LEGACY_LABEL}.plist"
+    old.parent.mkdir(parents=True)
+    old.write_bytes(b"old")
+    launchd.PLIST_PATH.write_bytes(b"previous plist")
+    calls = []
+    bootstrap_new_count = 0
+
+    def run(*args):
+        nonlocal bootstrap_new_count
+        calls.append(args)
+        if args[0] == "print" and launchd.LEGACY_LABEL in args[-1]:
+            return subprocess.CompletedProcess(args, 0, stdout="loaded", stderr="")
+        if args[0] == "print" and launchd.LABEL in args[-1]:
+            return subprocess.CompletedProcess(args, 0, stdout="loaded", stderr="")
+        if args[0] == "bootstrap" and str(launchd.PLIST_PATH) in args:
+            bootstrap_new_count += 1
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="restore failed")
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(launchd, "_run_launchctl", run)
+    with pytest.raises(launchd.DaemonInstallerError, match="restore failed"):
+        launchd.install(port=4317)
+
+    assert bootstrap_new_count == 2
+    assert ("bootstrap", launchd._domain_target(), str(old)) in calls
+
+
+def test_failed_upgrade_does_not_restart_legacy_after_data_migration(isolated_paths, monkeypatch):
+    home = isolated_paths / "home"
+    home.mkdir()
+    new = home / ".tokenwell"
+    new.mkdir()
+    (new / "tokenwell.db").write_bytes(b"db")
+    (home / ".claude-unlimited").symlink_to(new, target_is_directory=True)
+    monkeypatch.setattr(launchd.Path, "home", classmethod(lambda cls: home))
+    old = isolated_paths / "LaunchAgents" / f"{launchd.LEGACY_LABEL}.plist"
+    old.parent.mkdir(parents=True, exist_ok=True)
+    old.write_bytes(b"old")
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        if args[0] == "print" and launchd.LEGACY_LABEL in args[-1]:
+            return subprocess.CompletedProcess(args, 0, stdout="loaded", stderr="")
+        if args[0] == "bootstrap" and str(launchd.PLIST_PATH) in args:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="new failed")
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(launchd, "_run_launchctl", run)
+    with pytest.raises(launchd.DaemonInstallerError):
+        launchd.install(port=4317)
+
+    assert ("bootstrap", launchd._domain_target(), str(old)) not in calls
+
+
 def test_uninstall_removes_plist_and_boots_out(isolated_paths, monkeypatch):
     fake = FakeLaunchctl()
     monkeypatch.setattr(launchd, "_run_launchctl", fake)
