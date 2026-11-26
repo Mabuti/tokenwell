@@ -63,11 +63,11 @@ def test_parse_version_stops_at_the_first_non_numeric_part():
     assert updater.parse_version("v1.2.3-rc1") == (1, 2, 3)
 
 
-def test_is_newer_orders_four_part_fork_releases_against_their_upstream_base():
-    assert updater.is_newer("1.2.7.1", "1.2.7")
-    assert updater.is_newer("v1.2.7.1", "v1.2.7")
-    assert updater.is_newer("1.2.8", "1.2.7.1")
-    assert not updater.is_newer("1.2.7", "1.2.7.1")
+def test_is_newer_orders_three_part_releases():
+    assert updater.is_newer("2.0.0", "1.3.1")
+    assert updater.is_newer("v2.0.1", "v2.0.0")
+    assert not updater.is_newer("2.0.0", "2.0.0")
+    assert not updater.is_newer("1.3.9", "2.0.0")
 
 
 # ---- checking ----

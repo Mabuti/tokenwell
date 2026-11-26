@@ -16,7 +16,7 @@ automatically from that tag.
 1. Bump the version in **`tokenwell/__init__.py`**:
 
    ```python
-   __version__ = "0.2.0"
+   __version__ = "2.0.0"
    ```
 
 2. **Build the macOS HUD and commit its checksum** (on a Mac — see below for
@@ -26,7 +26,7 @@ automatically from that tag.
    cd macos-widget && ./build.sh --release
    ```
 
-   That writes `macos-widget/dist/HUD-0.2.0-macos.zip` — a **universal**
+   That writes `macos-widget/dist/HUD-2.0.0-macos.zip` — a **universal**
    binary (Apple Silicon + Intel; the build refuses to finish otherwise) — and
    `macos-widget/HUD.sha256`. The **checksum file is committed**; the zip is
    not.
@@ -36,23 +36,20 @@ automatically from that tag.
 
    ```bash
    git add tokenwell/__init__.py macos-widget/HUD.sha256
-   git commit -m "chore(release): 0.2.0"
+   git commit -m "chore(release): 2.0.0"
    ```
 
 4. Tag and push:
 
    ```bash
-   git tag v0.2.0
+   git tag v2.0.0
    git push origin main
-   git push origin v0.2.0
+   git push origin v2.0.0
    ```
 
-   Push the tag by name. `git tag v0.2.0` makes a lightweight tag, and
+   Push the tag by name. `git tag v2.0.0` makes a lightweight tag, and
    `git push --follow-tags` only sends annotated tags, so it would push `main`,
    skip the tag, and the release workflow would never start.
-
-   The repository uses four-part release versions when a release extends an
-   existing three-part version, so a release may also look like `v1.2.7.1`.
 
 That's it. `.github/workflows/release.yml` then:
 
@@ -65,7 +62,7 @@ That's it. `.github/workflows/release.yml` then:
 5. Once the workflow has finished, attach the HUD and publish:
 
    ```bash
-   scripts/publish_release.sh v0.2.0 [release-notes.md]
+   scripts/publish_release.sh v2.0.0 [release-notes.md]
    ```
 
    Pass a notes file to replace the generated list of commit subjects with
@@ -125,18 +122,15 @@ launch. When there is a paid Developer ID to notarize with, that step goes away.
 | **MINOR** — `0.1.0 → 0.2.0` | New features, new settings, anything additive |
 | **MAJOR** — `0.9.0 → 1.0.0` | Breaking changes: a removed CLI command, an incompatible config or export format |
 
-Since 1.0.0 the contract is real: a breaking change needs a MAJOR bump, and
+From 2.0.0 onward the contract is real: a breaking change needs a MAJOR bump, and
 says so plainly in the commit subject so it reaches the notes.
 
-Tags are always `v`-prefixed (`v0.2.0`); `__version__` never is (`0.2.0`).
+Tags are always `v`-prefixed (`v2.0.0`); `__version__` never is (`2.0.0`).
 
-### Four-part releases
-
-When a release extends an existing three-part version, the fourth component is
-an incrementing release counter: `<base three-part>.<release counter>`.
-`v1.2.7.1` is the first such release after `1.2.7`; a later release may use
-`v1.2.7.2`. `parse_version` compares these tuples monotonically without
-special-casing: `(1, 2, 7, 1) > (1, 2, 7)` and `(1, 2, 8) > (1, 2, 7, 1)`.
+Tokenwell 2.0.0 is the first Tokenwell release. Earlier `v1.x` tags are kept
+as history. From here on, releases use plain three-part semantic versions:
+MAJOR for breaking install or data changes, MINOR for features, and PATCH for
+fixes.
 
 ## How the updater consumes a release
 
